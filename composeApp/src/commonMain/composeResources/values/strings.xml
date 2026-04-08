@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tabOneCreate">Create</string>
+    <string name="tabTwoExplore">Explore</string>
+    <string name="tabThreeFiles">Files</string>
+    <string name="tabFourProfile">Account</string>
+</resources>

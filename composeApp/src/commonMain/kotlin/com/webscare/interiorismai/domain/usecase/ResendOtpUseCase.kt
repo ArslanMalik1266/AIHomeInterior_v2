@@ -1,0 +1,15 @@
+package com.webscare.interiorismai.domain.usecase
+
+import com.webscare.interiorismai.domain.model.VerifyResponse
+import com.webscare.interiorismai.domain.repo.AuthRepository
+
+class ResendOtpUseCase(private val repository: AuthRepository) {
+    suspend operator fun invoke(
+        packageName: String,
+        deviceId: String,
+        userEmail: String,
+        authProvider: String
+    ): Result<VerifyResponse> {
+        return repository.login(packageName, deviceId, userEmail, authProvider)
+    }
+}
