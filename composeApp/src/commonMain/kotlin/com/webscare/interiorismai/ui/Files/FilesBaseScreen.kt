@@ -2,6 +2,7 @@ package com.webscare.interiorismai.ui.Files
 
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -21,6 +22,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import com.webscare.interiorismai.navigation.Routes
 import com.webscare.interiorismai.ui.CreateAndExplore.RoomEvent
 import com.webscare.interiorismai.ui.CreateAndExplore.RoomsViewModel
+import com.webscare.interiorismai.utils.addPressEffect
 import com.webscare.interiorismai.utils.getImageModel
 import homeinterior.composeapp.generated.resources.Res
 import homeinterior.composeapp.generated.resources.roomplaceholder
@@ -101,6 +103,7 @@ fun FilesScreen(
                                     pagerState.animateScrollToPage(index)
                                 }
                             },
+
                             text = {
                                 Text(
                                     text = title,

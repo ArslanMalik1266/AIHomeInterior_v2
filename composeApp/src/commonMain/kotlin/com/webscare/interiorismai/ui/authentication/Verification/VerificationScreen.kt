@@ -78,6 +78,9 @@ fun VerificationScreen(
             }
         }
     }
+    LaunchedEffect(Unit) {
+        event(RegisterEvent.StartTimer)
+    }
 
     Box(
         modifier = Modifier

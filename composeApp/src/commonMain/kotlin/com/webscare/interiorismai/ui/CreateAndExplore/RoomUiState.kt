@@ -22,6 +22,7 @@ data class RoomUiState(
     val searchQuery: String = "",
     val isEditMode: Boolean = false,
 
+
     val filterState: FilterState = FilterState(),
     val filterCount: Int = 0,
     val errorMessage: String? = null,

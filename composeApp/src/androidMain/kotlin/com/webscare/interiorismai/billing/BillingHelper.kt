@@ -71,20 +71,29 @@ actual class BillingHelper actual constructor(
     }
 
     actual fun launchPurchase(productId: String): Boolean {
+        println("🔴 LAUNCH 1: productId=$productId")
+        println("🔴 LAUNCH 2: productDetailsList size=${productDetailsList.size}")
+        println("🔴 LAUNCH 3: productDetailsList ids=${productDetailsList.map { it.productId }}")
+
         val product = productDetailsList.find { it.productId == productId } ?: run {
-            println("❌ Product not found: $productId")
+            println("❌ LAUNCH FAIL: Product not found: $productId")
             return false  // ✅ product nahi mila
         }
+
         val activity = AppContext.getActivity() ?: run {
-            println("❌ Not an Activity!")
+            println("❌ LAUNCH FAIL: Activity is NULL!")
             return false  // ✅ activity nahi mili
         }
+        println("🔴 LAUNCH 4: activity found = $activity")
+
         val params = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(
                 listOf(BillingFlowParams.ProductDetailsParams.newBuilder()
                     .setProductDetails(product).build())
             ).build()
         billingClient.launchBillingFlow(activity, params)
+        println("🔴 LAUNCH 5: launchBillingFlow called!")
+
         return true  // ✅ successfully launched
     }
 

@@ -43,6 +43,7 @@ package com.webscare.interiorismai.ui.Account
     import com.webscare.interiorismai.ui.CreateAndExplore.RoomEvent
     import com.webscare.interiorismai.ui.CreateAndExplore.RoomsViewModel
     import com.webscare.interiorismai.ui.UiUtils.ProgressIndicator
+    import com.webscare.interiorismai.ui.authentication.AuthViewModel
     import com.webscare.interiorismai.utils.SetStatusBarIcons
     import com.webscare.interiorismai.utils.toggleStatusBarIcons
     import homeinterior.composeapp.generated.resources.ic_subscribed_bg
@@ -128,7 +129,6 @@ package com.webscare.interiorismai.ui.Account
         LaunchedEffect(state.navigateToLogin) {
             if (state.navigateToLogin) {
                 roomsViewModel.onSubscriptionEvent(RoomEvent.ClearNavigateToLogin)
-
                 onLoginClick()
             }
         }

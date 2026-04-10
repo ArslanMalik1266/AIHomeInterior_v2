@@ -159,6 +159,7 @@ class AuthViewModel(private val verifyOtpUseCase: VerifyOtpUseCase,
                     // 4. User details ko bhi update karein taake profile sync rahe
                     _user.value = deviceLinkResult.user
 
+
                     println("DEBUG: Credits Refreshed -> Total: ${deviceLinkResult.totalCredits}")
 
                 }.onFailure { error ->
@@ -195,28 +196,45 @@ class AuthViewModel(private val verifyOtpUseCase: VerifyOtpUseCase,
                     performResendOtp()
                 }
             }
+            RegisterEvent.StartTimer -> {
+                startResendTimer()
+            }
             // Baaki events jo aapne maange nahi wo ignore kar diye
             else -> {}
         }
     }
 
+    private var isResendLoading = false
+
     private fun performResendOtp() {
+        // ✅ HARD GUARD (prevents spam + race conditions)
+        if (isResendLoading || !_state.value.canResend) return
+
         viewModelScope.launch {
-            // 1. Timer start karein (Aapka timer logic pehle se maujood hai)
-            startResendTimer()
+            isResendLoading = true
 
-            // 2. API Hit karein
-            val result = resendOtpUseCase(
-                packageName = "com.webscare.interiorismai",
-                deviceId = getDeviceId(),
-                userEmail = _state.value.email,
-                authProvider = "email"
-            )
+            try {
+                // ✅ Start timer immediately (better UX + blocks further clicks)
+                startResendTimer()
 
-            result.onSuccess { response ->
-                _uiEvent.emit(CommonUiEvent.ShowSuccess("OTP Resent Successfully!"))
-            }.onFailure { e ->
-                _uiEvent.emit(CommonUiEvent.ShowError(e.message ?: "Failed to resend OTP"))
+                val result = resendOtpUseCase(
+                    packageName = "com.webscare.interiorismai",
+                    deviceId = getDeviceId(),
+                    userEmail = _state.value.email,
+                    authProvider = "email"
+                )
+
+                result.onSuccess {
+                    _uiEvent.emit(CommonUiEvent.ShowSuccess("OTP Resent Successfully!"))
+                }.onFailure { e ->
+                    _uiEvent.emit(CommonUiEvent.ShowError(e.message ?: "Failed to resend OTP"))
+                }
+
+            } catch (e: Exception) {
+                _uiEvent.emit(CommonUiEvent.ShowError(e.message ?: "Unexpected error"))
+            } finally {
+                // ✅ ALWAYS reset (even if crash happens)
+                isResendLoading = false
             }
         }
     }
@@ -250,6 +268,8 @@ class AuthViewModel(private val verifyOtpUseCase: VerifyOtpUseCase,
                 if (deviceLinkResult.status == "linked") {
                     settings.putBoolean(Constants.LOGIN, true)
                     settings.putString("user_email", deviceLinkResult.userEmail ?: "")
+                    _state.update { it.copy(email = deviceLinkResult.userEmail ?: "") }
+
                     _uiEvent.emit(ShowSuccess("Device Linked Successfully"))
                     _uiEvent.emit(NavigateToSuccess)
                 }
@@ -300,18 +320,25 @@ class AuthViewModel(private val verifyOtpUseCase: VerifyOtpUseCase,
 
     private fun startResendTimer() {
         timerJob?.cancel()
-        _state.value = _state.value.copy(canResend = false, resendTimerSeconds = 30)
+        _state.value = _state.value.copy(canResend = false, resendTimerSeconds = 60)
         timerJob = viewModelScope.launch {
-            flow {
-                for (i in 30 downTo 0) {
-                    emit(i)
-                    if (i > 0) delay(1000)
+            for (i in 60 downTo 0) {
+                _state.update {
+                    it.copy(resendTimerSeconds = i)
                 }
-            }.onCompletion {
-                _state.value = _state.value.copy(canResend = true, resendTimerSeconds = 0)
-            }.collect { seconds ->
-                _state.value = _state.value.copy(resendTimerSeconds = seconds)
+                delay(1000)
             }
+            _state.update {
+                it.copy(
+                    canResend = true,
+                    resendTimerSeconds = 0
+                )
+            }
+            }
+        }
+    fun onVerificationScreenOpened() {
+        if (_state.value.resendTimerSeconds == 0 && !_state.value.canResend) {
+            startResendTimer()
         }
     }
 

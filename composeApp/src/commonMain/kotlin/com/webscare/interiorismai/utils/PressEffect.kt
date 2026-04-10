@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 
-fun Modifier.clickable(onClick: () -> Unit = {}): Modifier = composed {
+fun Modifier.addPressEffect(onClick: () -> Unit = {}): Modifier = composed {
     var isPressed by remember { mutableStateOf(false) }
 
     val scale by animateFloatAsState(

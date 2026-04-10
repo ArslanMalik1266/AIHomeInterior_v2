@@ -919,21 +919,31 @@ No structural changes to walls, ceiling, floor, windows, or doors. No bare or co
         println("🟡 onSubscriptionEvent called: $event")
         when (event) {
             is RoomEvent.OnPurchasePlan -> {
-                println("🟡 OnPurchasePlan: productId=${event.productId}")
+                println("🔴 STEP 1: OnPurchasePlan hit")
+                println("🔴 STEP 2: email = '${authViewModel.state.value.email}'")
+                println("🔴 STEP 3: navigateToLogin = ${_state.value.navigateToLogin}")
+                println("🔴 STEP 4: isPurchasing = ${_state.value.isPurchasing}")
+                println("🔴 STEP 5: billingHelper = $billingHelper")
+                println("🔴 STEP 6: billingProducts = ${_state.value.billingProducts.size}")
+
+
 
                 // ✅ EMAIL ki jagah LOGIN flag check karo
-                val isLoggedIn = authViewModel.settings.getBoolean(
-                    com.webscare.interiorismai.utils.Constants.LOGIN,
-                    false
-                )
+                val email = authViewModel.state.value.email
 
-                if (!isLoggedIn) {
+                if (email.isNullOrBlank()) {
+                    println("🔴 STEP 7: EMAIL BLANK - going to login")
+
                     _state.update { it.copy(navigateToLogin = true) }
                     return
                 }
+                println("🔴 STEP 7: EMAIL OK - launching purchase")
+
 
                 _state.update { it.copy(isPurchasing = true, purchaseError = null) }
                 billingHelper?.launchPurchase(event.productId)
+                println("🔴 STEP 8: launchPurchase called with ${event.productId}")
+
             }
             RoomEvent.ClearPurchaseState -> {
                 _state.update { it.copy(purchaseSuccess = null, purchaseError = null) }

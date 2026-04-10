@@ -29,7 +29,7 @@ val dataModule = module {
             baseUrl = "https://interior.shabbirhussain.com/api"
         )
     }
-    single<AuthRepository> { AuthRepositoryImpl(get()) }
+    single<AuthRepository> { AuthRepositoryImpl(get())}
     single<RoomsRepository> { RoomRepositoryImpl(get()) }
     single<CreditsRepository> { CreditsRepositoryImpl(get()) }
     single<InteriorsRepository> { InteriorsRepositoryImpl(get()) }

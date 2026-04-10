@@ -40,7 +40,7 @@ import com.webscare.interiorismai.ui.authentication.AuthViewModel
 import com.webscare.interiorismai.ui.theme.grey_color
 import com.webscare.interiorismai.utils.NotificationManager
 import com.webscare.interiorismai.utils.SettingsManager
-import com.webscare.interiorismai.utils.clickable
+import com.webscare.interiorismai.utils.addPressEffect
 import com.webscare.interiorismai.utils.getAppVersion
 import com.webscare.interiorismai.utils.getDeviceInfo
 import com.webscare.interiorismai.utils.openEmail
@@ -613,7 +613,7 @@ fun AppInfoItem(
             modifier = Modifier
                 .fillMaxWidth()
 
-                .clickable() { onClick() }
+                .addPressEffect { onClick() }
                 .clip(RoundedCornerShape(8.dp))
                 .padding(vertical = 15.dp, horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,

@@ -48,6 +48,7 @@ val viewModelModule = module {
             startImageTrackingUseCase = get(),
             interiorsRepository = get()
 
+
         )
     }
 
