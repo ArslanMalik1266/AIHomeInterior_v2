@@ -1,6 +1,7 @@
 package com.webscare.interiorismai.ui.CreateAndExplore.Explore
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -14,14 +15,18 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,10 +53,12 @@ fun FilterBottomSheetContent(
     availableColors: List<ColorPalette>,
     onFilterStateChange: (FilterState) -> Unit,
     onToggleSection: (FilterSection) -> Unit,
+    expandedSection: FilterSection?,
     onApplyFilters: () -> Unit,
     onCancel: () -> Unit,
     onClearAll: () -> Unit
 ) {
+    var activeSection by remember { mutableStateOf<FilterSection?>(null) }
     val primaryGreen = Color(0xFFA3B18A)
     val darkText = Color(0xFF2C2C2C)
     val mediumText = Color(0xFF323232)
@@ -62,19 +69,23 @@ fun FilterBottomSheetContent(
     val cancelBorderColor = Color(0xFFE1DDDD)
     val whiteText = Color(0xFFFEF7F7)
 
-    LazyColumn(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
+            .wrapContentHeight()
+
             .background(Color.White)
-            .padding(horizontal = 21.dp),
-    ) {
-        stickyHeader {
+            .padding(horizontal = 21.dp)
+            .navigationBarsPadding()
+    )
+    {
             Row(
                 modifier = Modifier.fillMaxWidth().background(Color.White)
                     .padding(horizontal = 10.dp, vertical = 20.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
-            ) {
+            )
+            {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "Filters",
@@ -97,12 +108,11 @@ fun FilterBottomSheetContent(
                     modifier = Modifier.clickable { onClearAll() }
                 )
             }
-        }
 
-        item {
+
             ExpandableFilterSection(
                 title = "Type of Room",
-                expanded = expandedRoomType,
+                expanded = expandedSection == FilterSection.ROOM_TYPE,
 
                 onExpandChange = { onToggleSection(FilterSection.ROOM_TYPE) },
                 dividerColor = dividerGray,
@@ -117,12 +127,12 @@ fun FilterBottomSheetContent(
                     lightText = lightText
                 )
             }
-        }
 
-        item {
+
+
             ExpandableFilterSection(
                 title = "Style",
-                expanded = expandedStyle,
+                expanded = expandedSection == FilterSection.STYLE,
                 onExpandChange = { onToggleSection(FilterSection.STYLE) },
                 dividerColor = dividerGray,
                 titleColor = mediumText
@@ -136,12 +146,12 @@ fun FilterBottomSheetContent(
                     lightText = lightText
                 )
             }
-        }
 
-        item {
+
+
             ExpandableFilterSection(
                 title = "Color",
-                expanded = expandedColor,
+                expanded = expandedSection == FilterSection.COLOR,
                 onExpandChange = { onToggleSection(FilterSection.COLOR) },
                 dividerColor = dividerGray,
                 titleColor = mediumText
@@ -153,45 +163,45 @@ fun FilterBottomSheetContent(
                     primaryGreen = primaryGreen
                 )
             }
-        }
 
-        item {
-            ExpandableFilterSection(
-                title = "By Format",
-                expanded = expandedFormat,
-                onExpandChange = { onToggleSection(FilterSection.FORMAT) },
-                dividerColor = dividerGray,
-                titleColor = mediumText
-            ) {
-                FormatOptions(
-                    selectedOptions = filterState.selectedFormats,
-                    onOptionsSelected = { onFilterStateChange(filterState.copy(selectedFormats = it)) },
-                    primaryGreen = primaryGreen,
-                    borderGray = borderGray,
-                    lightText = lightText
-                )
-            }
-        }
 
-        item {
-            ExpandableFilterSection(
-                title = "Price",
-                expanded = expandedPrice,
-                onExpandChange = { onToggleSection(FilterSection.PRICE) },
-                dividerColor = dividerGray,
-                titleColor = mediumText
-            ) {
-                PriceOptions(
-                    selectedOptions = filterState.selectedPrices,
-                    onOptionsSelected = { onFilterStateChange(filterState.copy(selectedPrices = it)) },
-                    primaryGreen = primaryGreen,
-                    borderGray = borderGray,
-                    lightText = lightText
-                )
-            }
-        }
+//        item {
+//            ExpandableFilterSection(
+//                title = "By Format",
+//                expanded = activeSection == FilterSection.COLOR,
+//                onExpandChange = { onToggleSection(FilterSection.FORMAT) },
+//                dividerColor = dividerGray,
+//                titleColor = mediumText
+//            ) {
+//                FormatOptions(
+//                    selectedOptions = filterState.selectedFormats,
+//                    onOptionsSelected = { onFilterStateChange(filterState.copy(selectedFormats = it)) },
+//                    primaryGreen = primaryGreen,
+//                    borderGray = borderGray,
+//                    lightText = lightText
+//                )
+//            }
+//        }
 
-        item {
+//        item {
+//            ExpandableFilterSection(
+//                title = "Price",
+//                expanded = expandedPrice,
+//                onExpandChange = { onToggleSection(FilterSection.PRICE) },
+//                dividerColor = dividerGray,
+//                titleColor = mediumText
+//            ) {
+//                PriceOptions(
+//                    selectedOptions = filterState.selectedPrices,
+//                    onOptionsSelected = { onFilterStateChange(filterState.copy(selectedPrices = it)) },
+//                    primaryGreen = primaryGreen,
+//                    borderGray = borderGray,
+//                    lightText = lightText
+//                )
+//            }
+//        }
+
+
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                 horizontalArrangement = Arrangement.End
@@ -228,11 +238,10 @@ fun FilterBottomSheetContent(
                     )
                 }
             }
-        }
 
-        item {
+
             Spacer(modifier = Modifier.height(20.dp))
-        }
+
     }
 }
 
@@ -245,6 +254,9 @@ fun ExpandableFilterSection(
     titleColor: Color,
     content: @Composable () -> Unit
 ) {
+    val windowInfo = LocalWindowInfo.current
+    val screenHeight = windowInfo.containerSize.height  // in pixels
+    val maxContentHeight = (screenHeight * 0.5f)
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -275,11 +287,11 @@ fun ExpandableFilterSection(
                 animationSpec = tween(
                     durationMillis = 300,
                     easing = FastOutSlowInEasing
-                ),
-                expandFrom = Alignment.Top
+                )
             ) + fadeIn(
                 animationSpec = tween(
-                    durationMillis = 300
+                    durationMillis = 300,
+                    easing = FastOutSlowInEasing
                 )
             ),
             exit = shrinkVertically(
@@ -289,11 +301,17 @@ fun ExpandableFilterSection(
                 )
             ) + fadeOut(
                 animationSpec = tween(
-                    durationMillis = 300
+                    durationMillis = 300,
+                    easing = FastOutSlowInEasing
                 )
             )
         ) {
-            Column {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = with(LocalDensity.current) { maxContentHeight.toDp() })
+                    .verticalScroll(rememberScrollState())
+            ) {
                 Spacer(modifier = Modifier.height(5.dp))
                 content()
             }

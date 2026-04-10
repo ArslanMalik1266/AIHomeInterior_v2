@@ -74,9 +74,11 @@ fun CreateScreen(
     onNavigateToAboutToGenerate: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
+
     val dbImages by viewModel.dbGeneratedImages.collectAsState()
     val isDbLoaded by viewModel.isDbLoaded.collectAsState()
     val scrollState = rememberScrollState()
+
     val isScrolled = scrollState.value > 0
 
 

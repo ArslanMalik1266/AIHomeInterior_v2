@@ -21,6 +21,10 @@ data class RoomUiState(
     val decodedImageBytes: List<ByteArray> = emptyList(),
     val searchQuery: String = "",
     val isEditMode: Boolean = false,
+    val isResultSheetExpanded: Boolean = false,
+    val selectedTaskId: String? = null,
+    val expandedSection: FilterSection? = null,
+
 
 
     val filterState: FilterState = FilterState(),

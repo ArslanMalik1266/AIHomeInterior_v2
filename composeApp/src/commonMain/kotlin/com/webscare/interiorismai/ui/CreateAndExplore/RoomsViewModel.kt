@@ -125,7 +125,7 @@ class RoomsViewModel(
                 selectedStyleName = draft.style,
                 selectedPaletteId = draft.paletteId,
                 currentPage = draft.currentPage,
-                selectedImage = "draft_picked"
+                selectedImage = "draft_picked",
             )
         }
     }
@@ -173,6 +173,7 @@ class RoomsViewModel(
             )
         }
     }
+
 
     fun onGeneratedImageClick(imageUrl: String) {
         _selectedGeneratedImage.value = imageUrl
@@ -240,6 +241,9 @@ class RoomsViewModel(
                     }
                 }
             }
+            is RoomEvent.ToggleResultSheet -> {
+                _state.update { it.copy(isResultSheetExpanded = event.expand) }
+            }
 
             is RoomEvent.GoToPage -> {
                 _state.update { it.copy(currentPage = event.page) }
@@ -279,11 +283,17 @@ class RoomsViewModel(
                 )
             }
 
-            RoomEvent.OnClearFilters -> {
-                _state.value = _state.value.copy(
-                    tempFilterState = FilterState(),
-                    tempFilterCount = 0
-                )
+            is RoomEvent.OnClearFilters -> {
+                _state.update {
+                    it.copy(
+                        tempFilterState = FilterState(),
+                        filterState = FilterState(),
+                        tempFilterCount = 0,
+                        filterCount = 0,
+                        expandedSection = null
+                    )
+                }
+                onRoomEvent(RoomEvent.OnApplyFilters)
             }
 
             is RoomEvent.OnTempFilterChange -> {
@@ -295,25 +305,10 @@ class RoomsViewModel(
             }
 
             is RoomEvent.OnToggleFilterSection -> {
-                _state.value = when (event.section) {
-                    FilterSection.ROOM_TYPE -> _state.value.copy(
-                        expandedRoomType = !_state.value.expandedRoomType
-                    )
-
-                    FilterSection.STYLE -> _state.value.copy(
-                        expandedStyle = !_state.value.expandedStyle
-                    )
-
-                    FilterSection.COLOR -> _state.value.copy(
-                        expandedColor = !_state.value.expandedColor
-                    )
-
-                    FilterSection.FORMAT -> _state.value.copy(
-                        expandedFormat = !_state.value.expandedFormat
-                    )
-
-                    FilterSection.PRICE -> _state.value.copy(
-                        expandedPrice = !_state.value.expandedPrice
+                _state.update { currentState ->
+                    currentState.copy(
+                        // Agar pehle se wahi section khula hai to null (close), warna naya section open
+                        expandedSection = if (currentState.expandedSection == event.section) null else event.section
                     )
                 }
             }

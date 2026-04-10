@@ -151,6 +151,9 @@ fun FilesScreen(
                 1 -> DraftsContent(
                     viewModel = viewModel,
                     onImageClick = { clickedDraft ->
+                        println("DEBUG_DRAFT_CLICK: navigating to = ${Routes.AddScreen}")
+                        println("DEBUG_DRAFT_CLICK: currentPage = ${clickedDraft.currentPage}")
+                        println("DEBUG_DRAFT_CLICK: roomType = ${clickedDraft.roomType}")
                         viewModel.selectDraftImage(clickedDraft)
                         navController.navigate(Routes.AddScreen)
                     }

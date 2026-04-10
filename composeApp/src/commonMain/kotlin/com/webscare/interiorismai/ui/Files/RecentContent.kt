@@ -28,8 +28,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -43,6 +45,8 @@ import com.webscare.interiorismai.data.local.entities.RecentGeneratedEntity
 import com.webscare.interiorismai.ui.CreateAndExplore.RoomUiState
 import com.webscare.interiorismai.ui.theme.green_btn
 import com.webscare.interiorismai.utils.getImageModel
+import homeinterior.composeapp.generated.resources.play_fair_italic
+import org.jetbrains.compose.resources.Font
 
 @Composable
 fun RecentContent(
@@ -136,6 +140,62 @@ private fun BundleCard(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp)
+                .align(Alignment.BottomCenter)
+                .background(
+                    Brush.verticalGradient(
+                        0.0f to Color.Transparent,
+                        1.0f to Color.Black.copy(alpha = 0.6f)
+                    )
+                )
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(70.dp)
+                .align(Alignment.BottomCenter)
+                .background(
+                    Brush.verticalGradient(
+                        0.0f to Color.Transparent,
+                        0.3f to Color.Black.copy(alpha = 0.1f),
+                        0.6f to Color.Black.copy(alpha = 0.4f),
+                        1.0f to Color.Black.copy(alpha = 0.6f)
+                    )
+                )
+        )
+
+        // 👇 Room type + style label at bottom-left
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 8.dp, bottom = 8.dp)
+        ) {
+            if (!bundle.roomType.isNullOrBlank()) {
+                Text(
+                    text = bundle.roomType.uppercase(),
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = Color.White,
+                    lineHeight = 1.sp,
+                )
+            }
+            val myFont = FontFamily(Font(Res.font.play_fair_italic))
+
+            if (!bundle.style.isNullOrBlank()) {
+                Text(
+                    text = bundle.style,
+                    fontSize = 14.sp,
+                    fontFamily = myFont,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    lineHeight = 14.sp,
+                )
+            }
         }
 
         if (extraImages > 0) {

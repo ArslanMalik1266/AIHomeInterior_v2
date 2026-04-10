@@ -12,6 +12,7 @@ sealed class RoomEvent {
     object OnResetLoading : RoomEvent()
     object OnClearFilters : RoomEvent()
     data object ClearNavigateToLogin : RoomEvent()
+    data class ToggleResultSheet(val expand: Boolean) : RoomEvent()
     data class GoToPage(val page: Int) : RoomEvent()
     data class SetEditMode(val isEdit: Boolean) : RoomEvent()
 

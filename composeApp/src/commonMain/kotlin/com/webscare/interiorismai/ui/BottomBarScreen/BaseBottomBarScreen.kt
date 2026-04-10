@@ -87,6 +87,7 @@ import com.webscare.interiorismai.ui.theme.selectedNavItem
 import com.webscare.interiorismai.ui.theme.unselectedNavItem
 import com.webscare.interiorismai.utils.GenerationStatus
 import com.webscare.interiorismai.utils.getPlatformContext
+import kotlinx.coroutines.launch
 
 @Composable
 fun BaseBottomBarScreen(
@@ -311,7 +312,8 @@ fun BaseBottomBarScreen(
                 modifier = Modifier
                     .background(Color.White)
                     .padding(bottom = padding.calculateBottomPadding() + if (isRunning) 60.dp else 0.dp)
-            ) {
+            )
+            {
                 // Bottom bar destinations
                 composable<Routes.Create> {
                     CreateScreen(
@@ -405,9 +407,15 @@ fun BaseBottomBarScreen(
                             }
                         },
                         onCloseClick = {
+                            val previousRoute = navController.previousBackStackEntry?.destination?.route
+                            println("DEBUG_ADDSCREEN_CLOSE: previousRoute = $previousRoute")
                             roomViewModel.onRoomEvent(RoomEvent.SetEditMode(false))
-                            roomViewModel.saveOrUpdateDraft()
                             navController.popBackStack()
+                            kotlinx.coroutines.GlobalScope.launch {
+                                kotlinx.coroutines.delay(800L)
+                                roomViewModel.saveOrUpdateDraft()
+                            }
+
                         }
                     )
                 }

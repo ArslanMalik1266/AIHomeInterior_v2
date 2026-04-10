@@ -28,7 +28,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,9 +56,12 @@ fun BaseGenerateScreen(roomsViewModel: RoomsViewModel, endToNext: () -> Unit, on
     val state by roomsViewModel.state.collectAsState()
     val pagerState = rememberPagerState(pageCount = { state.pageCount })
     val scope = rememberCoroutineScope()
+    var isClosing by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.currentPage) {
-        pagerState.animateScrollToPage(state.currentPage)
+        if (!isClosing) {  // 👈 only animate if not closing
+            pagerState.animateScrollToPage(state.currentPage)
+        }
     }
 
     Scaffold(
@@ -96,7 +102,10 @@ fun BaseGenerateScreen(roomsViewModel: RoomsViewModel, endToNext: () -> Unit, on
                     Color(0xFFD2F7BD)
                 ),
                 currentPage = state.currentPage,
-                onCloseClick = onCloseClick
+                onCloseClick = {
+                    isClosing = true   // 👈 block pager animation first
+                    onCloseClick()     // 👈 then close
+                }
             ) {
                 roomsViewModel.onRoomEvent(RoomEvent.OnPreviousPage)
             }

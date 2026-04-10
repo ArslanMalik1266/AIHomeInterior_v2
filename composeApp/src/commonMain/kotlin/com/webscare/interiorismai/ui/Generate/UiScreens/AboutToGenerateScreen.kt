@@ -46,6 +46,8 @@ fun AboutToGenerateScreen(
     val authState by authViewModel.state.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    var isClosing by remember { mutableStateOf(false) }
+
 
     val selectedType = state.selectedRoomType ?: ""
     val selectedStyle = state.selectedStyleName ?: ""
@@ -60,7 +62,7 @@ fun AboutToGenerateScreen(
         roomsViewModel.onRoomEvent(RoomEvent.OnResetLoading)
     }
     LaunchedEffect(state.isGenerating, state.isFetchingImages) {
-        if (!state.isGenerating && state.isFetchingImages) {
+        if (!isClosing && !state.isGenerating && state.isFetchingImages) {
             onResult()
         }
     }

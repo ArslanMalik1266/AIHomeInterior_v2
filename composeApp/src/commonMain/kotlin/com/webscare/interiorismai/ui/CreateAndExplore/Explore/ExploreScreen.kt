@@ -20,7 +20,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,16 +55,22 @@ import com.webscare.interiorismai.ui.CreateAndExplore.RoomEvent
 import com.webscare.interiorismai.ui.CreateAndExplore.RoomsViewModel
 import com.webscare.interiorismai.ui.theme.fieldBack
 import homeinterior.composeapp.generated.resources.ic_filter
+import homeinterior.composeapp.generated.resources.ic_premium_icon
 import homeinterior.composeapp.generated.resources.ic_search
 import homeinterior.composeapp.generated.resources.play_fair_italic
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.Font
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExploreScreen(viewModel: RoomsViewModel = koinViewModel(), onRoomClick: (RoomUi) -> Unit = {}) {
+    val scope = rememberCoroutineScope()
+    var showFilterSheet by remember { mutableStateOf(false) }
+
     val state by viewModel.state.collectAsState()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -162,6 +171,7 @@ fun ExploreScreen(viewModel: RoomsViewModel = koinViewModel(), onRoomClick: (Roo
                                 .clip(CircleShape)
                                 .clickable(enabled = true, onClick = {
                                     viewModel.onRoomEvent(RoomEvent.OnFilterClick)
+                                    showFilterSheet = true
                                 }),
                             contentAlignment = Alignment.Center
                         ) {
@@ -219,18 +229,21 @@ fun ExploreScreen(viewModel: RoomsViewModel = koinViewModel(), onRoomClick: (Roo
             }
         }
 
-        if (state.showFilterSheet) {
+        if (showFilterSheet) {
             ModalBottomSheet(
                 onDismissRequest = {
                     viewModel.onRoomEvent(RoomEvent.OnDismissFilterSheet)
+                    showFilterSheet = false
                 },
                 sheetState = sheetState,
                 containerColor = Color.Transparent,
                 dragHandle = null,
-                modifier = Modifier.statusBarsPadding()
+                modifier = Modifier.statusBarsPadding(),
+                contentWindowInsets = { WindowInsets(0) }
             )
             {
                 FilterBottomSheetContent(
+
                     filterState = state.tempFilterState,
                     filterCount = state.tempFilterCount,
                     expandedRoomType = state.expandedRoomType,
@@ -238,6 +251,7 @@ fun ExploreScreen(viewModel: RoomsViewModel = koinViewModel(), onRoomClick: (Roo
                     expandedColor = state.expandedColor,
                     expandedFormat = state.expandedFormat,
                     expandedPrice = state.expandedPrice,
+                    expandedSection = state.expandedSection,
                     onFilterStateChange = {
                         viewModel.onRoomEvent(RoomEvent.OnTempFilterChange(it))
                     },
@@ -246,12 +260,28 @@ fun ExploreScreen(viewModel: RoomsViewModel = koinViewModel(), onRoomClick: (Roo
                     },
                     onApplyFilters = {
                         viewModel.onRoomEvent(RoomEvent.OnApplyFilters)
+
+                        scope.launch {
+                            sheetState.hide()
+                        }.invokeOnCompletion {
+                            if (!sheetState.isVisible) {
+                                showFilterSheet = false
+                            }
+                        }
                     },
                     onCancel = {
                         viewModel.onRoomEvent(RoomEvent.OnDismissFilterSheet)
+                        showFilterSheet = false
                     },
                     onClearAll = {
-                        viewModel.onRoomEvent(RoomEvent.OnClearFilters)
+                        scope.launch {
+                            sheetState.hide()        // 👈 first hide the sheet fully
+                        }.invokeOnCompletion {
+                            if (!sheetState.isVisible) {
+                                viewModel.onRoomEvent(RoomEvent.OnClearFilters)  // 👈 THEN clear/collapse
+                                showFilterSheet = false
+                            }
+                        }
                     },
                     availableRoomTypes = state.availableRoomTypes,
                     availableStyles = state.availableStyles,
@@ -342,13 +372,9 @@ private fun RoomImageCard(
                 .fillMaxWidth()
                 .height(70.dp)
                 .align(Alignment.BottomCenter)
-                .background(
-                    Brush.verticalGradient(
-                        0.0f to Color.Transparent,
-                        1.0f to Color.Black.copy(alpha = 0.6f)
-                    )
+                .background(bottomGradient)
                 )
-        )
+
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
@@ -361,7 +387,7 @@ private fun RoomImageCard(
                 color = Color.White,
                 lineHeight = 1.sp,
             )
-            val myFont = FontFamily(Font(Res.font.play_fair_italic))
+            val myFont = playFairFont
 
             Text(
                 text = room.roomStyle,
@@ -380,6 +406,24 @@ private fun RoomImageCard(
                     .padding(top = 8.dp, end = 8.dp),
                 colors = room.colors
             )
+        }
+        if (room.isTrending == 1) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .size(36.dp)
+                    .background(
+                        color = Color.Transparent,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(Res.drawable.ic_premium_icon),
+                    contentDescription = "Trending",
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 }
@@ -456,3 +500,10 @@ fun OverlappingColorRow(modifier: Modifier = Modifier, colors: List<Color>) {
         }
     }
 }
+
+private val playFairFont @Composable get() = FontFamily(Font(Res.font.play_fair_italic))
+
+private val bottomGradient = Brush.verticalGradient(
+    0.0f to Color.Transparent,
+    1.0f to Color.Black.copy(alpha = 0.6f)
+)
