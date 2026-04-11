@@ -8,6 +8,7 @@ import com.webscare.interiorismai.domain.model.Rooms
 import com.webscare.interiorismai.domain.repo.RoomsRepository
 
 class RoomRepositoryImpl(val roomService: RoomService) : RoomsRepository {
+
     override suspend fun getRoomsList(): Rooms =
         roomService.getRooms().body<Rooms>()
 }

@@ -151,8 +151,8 @@ fun BaseGenerateScreen(roomsViewModel: RoomsViewModel, endToNext: () -> Unit, on
                             selectedStyleName = state.selectedStyleName,
                             searchQuery = state.styleSearchQuery,
                             isSearchExpanded = state.isStyleSearchExpanded,
-                            onStyleSelected = { style ->
-                                roomsViewModel.onRoomEvent(RoomEvent.OnStyleSelected(style))
+                            onStyleSelected = { id, name -> // 👈 Ab yahan do cheezein mil rahi hain
+                                roomsViewModel.onRoomEvent(RoomEvent.OnStyleSelected(id, name)) // ✅ Dono pass kar dein
                             },
                             onSearchQueryChange = { query ->
                                 roomsViewModel.onRoomEvent(RoomEvent.OnStyleSearchQueryChange(query))

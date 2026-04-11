@@ -45,8 +45,12 @@ package com.webscare.interiorismai.ui.Account
     import com.webscare.interiorismai.ui.UiUtils.ProgressIndicator
     import com.webscare.interiorismai.ui.authentication.AuthViewModel
     import com.webscare.interiorismai.utils.SetStatusBarIcons
+    import com.webscare.interiorismai.utils.addPressEffect
     import com.webscare.interiorismai.utils.toggleStatusBarIcons
+    import homeinterior.composeapp.generated.resources.app_icon
+    import homeinterior.composeapp.generated.resources.ic_app_icon
     import homeinterior.composeapp.generated.resources.ic_subscribed_bg
+    import homeinterior.composeapp.generated.resources.subscription_bg
     import kotlin.math.absoluteValue
 
     data class SubscriptionPlan(
@@ -140,7 +144,7 @@ package com.webscare.interiorismai.ui.Account
 
         ) {
             Image(
-                painter = painterResource(Res.drawable.subscriptionbackgroun),
+                painter = painterResource(Res.drawable.subscription_bg),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.FillBounds
@@ -280,27 +284,27 @@ package com.webscare.interiorismai.ui.Account
 
                 Spacer(modifier = Modifier.height(40.dp))
 
-                Button(
-                    onClick = {
-                        println("🔴 BUY NOW CLICKED!")
-                        val productId = when (pagerState.currentPage) {
-                            0 -> "credits_basic"
-                            1 -> "credits_standard"
-                            2 -> "credits_pro"
-                            else -> ""
-                        }
-                        println("🔴 productId=$productId")
-                        roomsViewModel.onSubscriptionEvent(RoomEvent.OnPurchasePlan(productId))
-                    },
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(51.dp).padding(horizontal = 24.dp),
-                    enabled = !state.isPurchasing,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Transparent
-                    ),
-                    contentPadding = PaddingValues(0.dp),
-                    shape = RoundedCornerShape(10.dp)
+                        .height(51.dp)
+                        .padding(horizontal = 24.dp)
+                        // 👇 Apply the effect here and move your logic inside
+                        .addPressEffect {
+                            if (!state.isPurchasing) {
+                                println("🔴 BUY NOW CLICKED!")
+                                val productId = when (pagerState.currentPage) {
+                                    0 -> "credits_basic"
+                                    1 -> "credits_standard"
+                                    2 -> "credits_pro"
+                                    else -> ""
+                                }
+                                println("🔴 productId=$productId")
+                                roomsViewModel.onSubscriptionEvent(RoomEvent.OnPurchasePlan(productId))
+                            }
+                        },
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color.Transparent
                 ) {
                     Box(
                         modifier = Modifier
@@ -311,8 +315,8 @@ package com.webscare.interiorismai.ui.Account
                                         Color(0xFFAADA56),
                                         Color(0xFF799F35),
                                     ),
-                                    start = Offset(0f, 0f),        // Top
-                                    end = Offset(0f, Float.POSITIVE_INFINITY)  // Bottom
+                                    start = Offset(0f, 0f),
+                                    end = Offset(0f, Float.POSITIVE_INFINITY)
                                 )
                             ),
                         contentAlignment = Alignment.Center
@@ -377,7 +381,15 @@ package com.webscare.interiorismai.ui.Account
                             .padding(horizontal = 24.dp)
                             .padding(top = 32.dp, bottom = 40.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+                    )
+                    {
+                        Image(
+                            painter = painterResource(Res.drawable.ic_app_icon),
+                            contentDescription = "Success",
+                            modifier = Modifier
+                                .padding(bottom = 24.dp)
+                                .size(60.dp)
+                        )
                         Text(
                             text = "Credits Added Successfully!",
                             fontSize = 24.sp,
@@ -394,15 +406,17 @@ package com.webscare.interiorismai.ui.Account
                             lineHeight = 18.sp
                         )
                         Spacer(modifier = Modifier.height(24.dp))
-                        Button(
-                            onClick = {
-                                showSuccessSheet = false
-                                onAddPhotoClick()
-                            },
-                            modifier = Modifier.fillMaxWidth().height(50.dp),
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                                // 👇 Applying the effect here
+                                .addPressEffect {
+                                    showSuccessSheet = false
+                                    onAddPhotoClick()
+                                },
                             shape = RoundedCornerShape(50),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                            contentPadding = PaddingValues(0.dp)
+                            color = Color.Transparent
                         ) {
                             Box(
                                 modifier = Modifier
@@ -450,16 +464,10 @@ package com.webscare.interiorismai.ui.Account
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = plan.name,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF696969),
-                        modifier = Modifier.padding(start = 18.dp)
-                    )
+
                     Box(
                         modifier = Modifier
                             .background(
@@ -499,6 +507,12 @@ package com.webscare.interiorismai.ui.Account
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Spacer(modifier = Modifier.height(30.dp))
+                    Text(
+                        text = plan.name,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF696969),
+                    )
                     Row(
                         verticalAlignment = Alignment.Bottom
                     ) {

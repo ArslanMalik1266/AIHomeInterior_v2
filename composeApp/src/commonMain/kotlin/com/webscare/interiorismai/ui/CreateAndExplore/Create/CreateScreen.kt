@@ -33,12 +33,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.compose.SubcomposeAsyncImage
@@ -58,7 +60,10 @@ import com.webscare.interiorismai.ui.CreateAndExplore.RoomEvent
 import com.webscare.interiorismai.ui.CreateAndExplore.RoomsViewModel
 import com.webscare.interiorismai.ui.theme.black_color
 import com.webscare.interiorismai.ui.theme.grey_color
+import com.webscare.interiorismai.utils.RippleViewKmp
+import com.webscare.interiorismai.utils.addPressEffect
 import com.webscare.interiorismai.utils.getImageModel
+import homeinterior.composeapp.generated.resources.ic_subscriptions
 import homeinterior.composeapp.generated.resources.play_fair_italic
 import homeinterior.composeapp.generated.resources.premiumicon
 import org.jetbrains.compose.resources.Font
@@ -98,28 +103,53 @@ fun CreateScreen(
             .fillMaxSize()
             .background(white_color)
             .windowInsetsPadding(WindowInsets.statusBars),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        Header(onClick = onPremiumClick)
+    )
+    {
+        Header(
+            onClick = onPremiumClick
+        )
         EmptyStateCard({ onAddPhotoClick() })
-        Column(
-            modifier = Modifier.verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(32.dp)
-        ) {
-            TrendingSection(
-                isLoading = state.isLoading,
-                rooms = state.trendingRooms,
-                onRoomClick = onRoomClick
-            )
-            RecentFilesSection(
-                generatedBundles = generatedBundles,
-                onBundleClick = { bundle ->
-                    viewModel.onRoomEvent(RoomEvent.ShowSelectedBundle(listOf(bundle)))
-                    bundle.bundleId?.let { onShowResults(it) }
-                },
-                onSeeAllClick = onSeeAllClick,
-                isDbLoaded = isDbLoaded
-            )
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier.verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(32.dp),
+            ) {
+                TrendingSection(
+                    isLoading = state.isLoading,
+                    rooms = state.trendingRooms,
+                    onRoomClick = onRoomClick
+                )
+                RecentFilesSection(
+                    generatedBundles = generatedBundles,
+                    onBundleClick = { bundle ->
+                        viewModel.onRoomEvent(RoomEvent.ShowSelectedBundle(listOf(bundle)))
+                        bundle.bundleId?.let { onShowResults(it) }
+                    },
+                    onSeeAllClick = onSeeAllClick,
+                    isDbLoaded = isDbLoaded
+                )
+            }
+
+            if (scrollState.value > 0) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White,
+                                        Color.White.copy(alpha = 0.8f),
+                                        Color.White.copy(alpha = 0.5f),
+                                        Color.White.copy(alpha = 0.2f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
+                    )
+
+            }
         }
     }
 }
@@ -145,14 +175,26 @@ fun Header(onClick: () -> Unit) {
                 lineHeight = 22.sp
             )
             Box(
-                modifier = Modifier.size(34.dp).clip(CircleShape).clickable { onClick() },
+                modifier = Modifier
+                    .size(34.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Image(
-                    painter = painterResource(Res.drawable.premiumicon),
-                    contentDescription = "",
-                    modifier = Modifier.size(22.dp)
-                )
+                Box(modifier = Modifier.wrapContentSize(unbounded = true)) {
+                RippleViewKmp(
+                    modifier = Modifier.size(70.dp),
+                    rippleColor = Color(0xFFD4F7BD).copy(alpha = 0.30f)
+                ) }
+                Box(
+                    modifier = Modifier.fillMaxSize().clip(CircleShape)
+                        .addPressEffect() { onClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(Res.drawable.ic_subscriptions),
+                        contentDescription = "",
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
         }
 
@@ -171,16 +213,16 @@ fun Header(onClick: () -> Unit) {
 
 @Composable
 private fun EmptyStateCard(onClick: () -> Unit) {
-    Box(modifier = Modifier.padding(start = 24.dp, end = 24.dp)) {
+    Box(modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 20.dp)) {
         Image(painter = painterResource(Res.drawable.createpageimage), contentDescription = null)
         Surface(
-            onClick = { onClick() },
             color = green_btn,
             shape = RoundedCornerShape(20),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 16.dp)
-                .height(28.dp),
+                .height(28.dp)
+                .addPressEffect(onClick = onClick),
         ) {
             Row(
                 modifier = Modifier
@@ -218,7 +260,7 @@ private fun TrendingSection(
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold,
             color = black_color,
-            modifier = Modifier.padding(start = 24.dp)
+            modifier = Modifier.padding(start = 24.dp, top = 20.dp)
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -228,6 +270,7 @@ private fun TrendingSection(
                 // Jab API call chal rahi ho
                 TrendingGridShimmer()
             }
+
             rooms.isEmpty() -> {
                 // Jab API call khatam ho jaye lekin koi trending room na mile
                 Box(
@@ -245,6 +288,7 @@ private fun TrendingSection(
                     )
                 }
             }
+
             else -> {
                 // Jab data mojood ho
                 TrendingGrid(rooms = rooms, onRoomClick = onRoomClick)
@@ -299,9 +343,9 @@ private fun RoomCategoryCard(room: RoomUi, modifier: Modifier = Modifier, onClic
     Box(
         modifier = modifier // External modifier use karein (jo weight handle kar raha hai)
             .width(126.dp)
+            .addPressEffect { onClick() }
             .clip(RoundedCornerShape(8.782.dp))
-            .background(Color(0xFFE8E8E8))
-            .clickable { onClick() }
+
     ) {
         // ✅ AsyncImage ki jagah SubcomposeAsyncImage use karein
         SubcomposeAsyncImage(
@@ -402,7 +446,7 @@ private fun RecentFilesSection(
         Spacer(modifier = Modifier.height(12.dp))
         RecentFilesRow(
             generatedBundles = generatedBundles,  // ✅ Matches parameter name
-            onBundleClick = onBundleClick   ,
+            onBundleClick = onBundleClick,
             isLoading = !isDbLoaded
         )
     }
@@ -423,11 +467,12 @@ private fun RecentFilesRow(
                 Box(
                     modifier = Modifier
                         .size(114.dp)
+                        .addPressEffect { onBundleClick(bundle) }
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFE8E8E8))
-                        .clickable { onBundleClick(bundle) }
+
                 ) {
-                    val coverImage = bundle.localPaths.firstOrNull() ?: bundle.imageUrls.firstOrNull()
+                    val coverImage =
+                        bundle.localPaths.firstOrNull() ?: bundle.imageUrls.firstOrNull()
                     if (coverImage != null) {
                         AsyncImage(
                             model = ImageRequest.Builder(LocalPlatformContext.current)
@@ -443,8 +488,7 @@ private fun RecentFilesRow(
                     }
                 }
             }
-        }
-        else if (isLoading) {
+        } else if (isLoading) {
             items(3) {
                 Box(
                     modifier = Modifier
@@ -454,8 +498,7 @@ private fun RecentFilesRow(
                         .shimmerLoading()
                 )
             }
-        }
-        else {
+        } else {
             item {
                 Box(
                     modifier = Modifier
@@ -489,7 +532,8 @@ private fun TrendingGridShimmer() {
             val isAlternate = columnIndex % 2 == 1
             Column(
                 modifier = Modifier.fillMaxHeight().width(126.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 columnItems.forEachIndexed { index, _ ->
                     val weight = when {
                         isAlternate && index == 1 -> 0.3f

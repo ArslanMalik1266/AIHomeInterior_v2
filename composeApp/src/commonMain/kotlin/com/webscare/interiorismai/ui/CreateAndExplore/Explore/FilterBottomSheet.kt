@@ -38,6 +38,7 @@ import org.jetbrains.compose.resources.painterResource
 import com.webscare.interiorismai.ui.CreateAndExplore.FilterSection
 import com.webscare.interiorismai.ui.CreateAndExplore.FilterState
 import com.webscare.interiorismai.ui.Generate.UiScreens.ColorPalette
+import com.webscare.interiorismai.utils.addPressEffect
 
 @Composable
 fun FilterBottomSheetContent(
@@ -105,7 +106,7 @@ fun FilterBottomSheetContent(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Normal,
                     color = primaryGreen,
-                    modifier = Modifier.clickable { onClearAll() }
+                    modifier = Modifier.addPressEffect { onClearAll() }
                 )
             }
 

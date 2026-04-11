@@ -39,6 +39,7 @@ import com.webscare.interiorismai.ui.common.base.CommonUiEvent
 import com.webscare.interiorismai.ui.theme.green_btn
 import com.webscare.interiorismai.ui.theme.grey_color
 import com.webscare.interiorismai.ui.theme.white_color
+import com.webscare.interiorismai.utils.addPressEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,47 +93,50 @@ fun ProfileScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp) // Buttons ke darmiyan gap
                 ) {
                     // Sign Out Button (Red Background)
-                    Button(
-                        onClick = {
-                            println("DEBUG_UI: Button clicked - Step 1") // Pehle ye check karein                            showLogoutDialog = false
-                            authViewModel.logout()
-                            println("DEBUG_UI: Button clicked - Step 2")
-                        },
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFB5C5C) // Wahi Red color jo Delete Account ka hai
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                            .height(48.dp)
+                            .addPressEffect {
+                                // Logic moved inside the press effect
+                                println("DEBUG_UI: Button clicked - Step 1")
+                                showLogoutDialog = false
+                                authViewModel.logout()
+                                println("DEBUG_UI: Button clicked - Step 2")
+                            },
+                        color = Color(0xFFFB5C5C), // Red color
+                        shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text(
-                            "Sign Out",
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                "Sign Out",
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 16.sp
+                            )
+                        }
                     }
 
                     // Cancel Button (Light Grey Background)
-                    Button(
-                        onClick = { showLogoutDialog = false },
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFF5F5F5) // Soft grey background
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                            .height(48.dp)
+                            // 👇 Replace the Button's internal onClick with your effect
+                            .addPressEffect {
+                                showLogoutDialog = false
+                            },
+                        color = Color(0xFFF5F5F5),
+                        shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text(
-                            "Cancel",
-                            color = Color(0xFF808080),
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 16.sp
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                "Cancel",
+                                color = Color(0xFF808080),
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 16.sp
+                            )
+                        }
                     }
                 }
             },
@@ -317,7 +321,11 @@ fun ProfileMenuItem(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = value == null) { onClick() }
+            .addPressEffect {
+                if (value == null) {
+                    onClick()
+                }
+            }
             .padding(top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {

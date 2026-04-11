@@ -15,6 +15,7 @@ sealed class RoomEvent {
     data class ToggleResultSheet(val expand: Boolean) : RoomEvent()
     data class GoToPage(val page: Int) : RoomEvent()
     data class SetEditMode(val isEdit: Boolean) : RoomEvent()
+    object OnShuffleRooms : RoomEvent()
 
 
 
@@ -43,7 +44,7 @@ sealed class RoomEvent {
     data class OnRoomTypeSelected(val roomType: String) : RoomEvent()
     data class OnRoomSearchQueryChange(val query: String) : RoomEvent()
     data class OnRoomSearchExpandedChange(val isExpanded: Boolean) : RoomEvent()
-    data class OnStyleSelected(val styleId: Int) : RoomEvent()
+    data class OnStyleSelected(val styleId: Int, val styleName: String) : RoomEvent()
     data class OnStyleSearchQueryChange(val query: String) : RoomEvent()
     data class OnStyleSearchExpandedChange(val isExpanded: Boolean) : RoomEvent()
     data class OnPaletteSelected(val paletteId: Int) : RoomEvent()

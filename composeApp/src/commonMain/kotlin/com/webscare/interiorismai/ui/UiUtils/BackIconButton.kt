@@ -18,12 +18,13 @@ import homeinterior.composeapp.generated.resources.arrow_back_
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import com.webscare.interiorismai.ui.theme.grey_color
+import com.webscare.interiorismai.utils.addPressEffect
 
 @Composable
 fun BackIconButton(image: DrawableResource = Res.drawable.arrow_back_, iconSize: Dp = 24.dp, tint: Color = grey_color, onClick: () -> Unit) {
-    Box(modifier = Modifier.size(30.dp).clip(CircleShape).clickable {
+    Box(modifier = Modifier.size(30.dp).addPressEffect() {
         onClick()
-    }, contentAlignment = Alignment.Center) {
+    }.clip(CircleShape), contentAlignment = Alignment.Center) {
         Image(
             painter = painterResource(image),
             contentDescription = "Close",

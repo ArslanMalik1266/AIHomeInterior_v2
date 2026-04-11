@@ -10,15 +10,22 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,10 +61,12 @@ import com.webscare.interiorismai.ui.CreateAndExplore.Create.shimmerLoading
 import com.webscare.interiorismai.ui.CreateAndExplore.RoomEvent
 import com.webscare.interiorismai.ui.CreateAndExplore.RoomsViewModel
 import com.webscare.interiorismai.ui.theme.fieldBack
+import com.webscare.interiorismai.utils.addPressEffect
 import homeinterior.composeapp.generated.resources.ic_filter
 import homeinterior.composeapp.generated.resources.ic_premium_icon
 import homeinterior.composeapp.generated.resources.ic_search
 import homeinterior.composeapp.generated.resources.play_fair_italic
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.Font
 
@@ -68,9 +77,15 @@ fun ExploreScreen(viewModel: RoomsViewModel = koinViewModel(), onRoomClick: (Roo
     var showFilterSheet by remember { mutableStateOf(false) }
 
     val state by viewModel.state.collectAsState()
+    val listState = rememberLazyStaggeredGridState()
+    val isScrolled by remember {
+        derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 }
+    }
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
+    val pullToRefreshState = rememberPullToRefreshState()
+    var isRefreshing by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -107,7 +122,7 @@ fun ExploreScreen(viewModel: RoomsViewModel = koinViewModel(), onRoomClick: (Roo
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 16.dp)
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp)
                 ) {
                     BasicTextField(
                         value = state.searchQuery,
@@ -129,13 +144,15 @@ fun ExploreScreen(viewModel: RoomsViewModel = koinViewModel(), onRoomClick: (Roo
                         TextFieldDefaults.DecorationBox(
                             value = state.searchQuery,
                             innerTextField = innerTextField,
-                            placeholder = { Text(
-                                text = "Try 'Modern Kitchen' or 'Boho'...",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = Color.Gray,
-                                letterSpacing = 0.16.sp
-                            ) },
+                            placeholder = {
+                                Text(
+                                    text = "Try 'Modern Kitchen' or 'Boho'...",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = Color.Gray,
+                                    letterSpacing = 0.16.sp
+                                )
+                            },
                             leadingIcon = {  // ✅ Left side icon ke liye
                                 Icon(
                                     painter = painterResource(Res.drawable.ic_search), // Aapka icon
@@ -158,21 +175,16 @@ fun ExploreScreen(viewModel: RoomsViewModel = koinViewModel(), onRoomClick: (Roo
                         )
                     }
 
-                    Box(modifier = Modifier.height(50.dp).aspectRatio(1f)) {
+                    Box(modifier = Modifier.height(50.dp).aspectRatio(1f) .addPressEffect {
+                        viewModel.onRoomEvent(RoomEvent.OnFilterClick)
+                        showFilterSheet = true
+                    }) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Color.White, CircleShape)
-                                .border(
-                                    width = 2.dp,  // ✅ Stroke ki width
-                                    color = fieldBack,  // ✅ Stroke ka color (bahar wala)
-                                    shape = CircleShape
-                                )
+                                .background(fieldBack, CircleShape)
                                 .clip(CircleShape)
-                                .clickable(enabled = true, onClick = {
-                                    viewModel.onRoomEvent(RoomEvent.OnFilterClick)
-                                    showFilterSheet = true
-                                }),
+                               ,
                             contentAlignment = Alignment.Center
                         ) {
                             Image(
@@ -210,23 +222,69 @@ fun ExploreScreen(viewModel: RoomsViewModel = koinViewModel(), onRoomClick: (Roo
                     }
                 }
             }
-
-            // Vertical Staggered Grid
-            AnimatedContent(
-                targetState = state.getRoomsResponse to state.filteredRooms.isEmpty(),
-                transitionSpec = {
-                    fadeIn() togetherWith fadeOut()
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    scope.launch {
+                        isRefreshing = true
+                        viewModel.onRoomEvent(RoomEvent.OnShuffleRooms)
+                        delay(600)
+                        isRefreshing = false
+                    }
+                },
+                state = pullToRefreshState,
+                indicator = {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.TopCenter
+                    ) {
+                        PullToRefreshDefaults.Indicator(
+                            state = pullToRefreshState,
+                            isRefreshing = isRefreshing,
+                            color = Color(0xFF99AD76),
+                            containerColor = Color.White
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxSize().background(Color(0xFFFFFFFF))
+            ) { Box(modifier = Modifier.fillMaxSize()) {
+                AnimatedContent(
+                    targetState = state.getRoomsResponse to state.filteredRooms.isEmpty(),
+                    transitionSpec = {
+                        fadeIn() togetherWith fadeOut()
+                    }
+                )
+                { (loading, isEmpty) ->
+                    when {
+                        loading is ResultState.Loading -> ExploreGridShimmer(gridState = listState)
+                        isEmpty -> EmptyRoomsMessage()
+                        else -> ExploreGrid(
+                            rooms = state.filteredRooms,
+                            onRoomClick = onRoomClick,
+                            gridState = listState
+                        )
+                    }
                 }
-            ) { (loading, isEmpty) ->
-                when {
-                    loading is ResultState.Loading -> ExploreGridShimmer()
-                    isEmpty -> EmptyRoomsMessage()
-                    else -> ExploreGrid(
-                        rooms = state.filteredRooms,
-                        onRoomClick = onRoomClick
+                if (isScrolled) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White,
+                                        Color.White.copy(alpha = 0.8f),
+                                        Color.White.copy(alpha = 0.5f),
+                                        Color.White.copy(alpha = 0.2f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
                     )
                 }
-            }
+            } }
+
         }
 
         if (showFilterSheet) {
@@ -311,12 +369,14 @@ private fun EmptyRoomsMessage() {
 @Composable
 private fun ExploreGrid(
     rooms: List<RoomUi>,
-    onRoomClick: (RoomUi) -> Unit
+    onRoomClick: (RoomUi) -> Unit,
+    gridState: LazyStaggeredGridState
 ) {
     LazyVerticalStaggeredGrid(
+        state = gridState,
         columns = StaggeredGridCells.Fixed(2),
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalItemSpacing = 8.dp
     ) {
@@ -338,8 +398,9 @@ private fun RoomImageCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(room.cardHeight.dp)
+            .addPressEffect() { onClick() }
             .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick() }
+
     ) {
         SubcomposeAsyncImage(
             model = ImageRequest.Builder(LocalPlatformContext.current)
@@ -373,7 +434,7 @@ private fun RoomImageCard(
                 .height(70.dp)
                 .align(Alignment.BottomCenter)
                 .background(bottomGradient)
-                )
+        )
 
         Column(
             modifier = Modifier
@@ -453,13 +514,14 @@ fun ImageCard(imageRes: DrawableResource, height: Dp, colors: List<Color>) {
 }
 
 @Composable
-private fun ExploreGridShimmer() {
+private fun ExploreGridShimmer(gridState: LazyStaggeredGridState) {
     val dummyItems = List(12) { it }
 
     LazyVerticalStaggeredGrid(
+        state = gridState,
         columns = StaggeredGridCells.Fixed(2),
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalItemSpacing = 8.dp
     ) {

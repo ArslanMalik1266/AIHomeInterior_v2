@@ -90,10 +90,11 @@ fun AccountScreen(
                 Box(
                     modifier = Modifier
                         .size(34.dp)
+                        .addPressEffect { onProfileClick() }
                         .clip(CircleShape)
                         .background(Color(0xFFF4F4F4))
-                        .border(1.dp, Color(0xFFF5F5F5), CircleShape)
-                        .clickable { onProfileClick() },
+                        .border(1.dp, Color(0xFFF5F5F5), CircleShape),
+
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
@@ -259,11 +260,11 @@ fun CreditCard(
 
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color(0xFF71BA47))
-                            .clickable(enabled = true, onClick = {
+                            .addPressEffect(onClick = {
                                 onSubscriptionClick()
                             })
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFF71BA47))
                     ) {
                         Text(
                             text = "Buy more Credits",
@@ -480,7 +481,7 @@ fun ModelsSection() {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
+                                .addPressEffect() {
                                     selectedModel = model
                                     isExpanded = false
                                 }

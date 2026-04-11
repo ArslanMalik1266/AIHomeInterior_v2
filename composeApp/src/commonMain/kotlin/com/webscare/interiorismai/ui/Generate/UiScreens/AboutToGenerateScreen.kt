@@ -12,9 +12,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -125,11 +128,11 @@ fun AboutToGenerateScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             GenerateButton(
 
-                modifier = Modifier.width(170.dp).height(49.dp).align(Alignment.CenterHorizontally)
+                modifier = Modifier.wrapContentSize().align(Alignment.CenterHorizontally)
             ) {
                 println("DEBUG_GENERATE: Button Clicked!")
                 println("DEBUG_GENERATE: totalCredits = ${authState.totalCredits}")
@@ -415,10 +418,23 @@ private fun ColorPaletteCard(
 @Composable
 private fun GenerateButton(modifier: Modifier = Modifier, onGenerateClick: () -> Unit) {
     val buttonGradient = Brush.linearGradient(
-        0.0f to Color(0xFFFFFFFF),
-        0.37f to Color(0xFFFFFFFF),
-        1.0f to Color(0xFFCEFFB3).copy(alpha = 0.48f)
+        colorStops = arrayOf(
+            0.0288f to Color(0xFF34D399).copy(alpha = 0.7f),
+            0.5144f to Color(0xFF25C768).copy(alpha = 0.7f),
+            1.0f    to Color(0xFF16A34A).copy(alpha = 0.9f)
+        ),
+        start = Offset(0f, 0f),
+        end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
     )
+    val borderGradient = Brush.linearGradient(
+        colorStops = arrayOf(
+            0.0773f to Color(0xFF34D399),
+            0.9281f to Color(0xFF16A34A)
+        ),
+        start = Offset(Float.POSITIVE_INFINITY, 0f), // 267.55deg ≈ right→left
+        end = Offset(0f, 0f)
+    )
+
 
     Button(
         onClick = onGenerateClick,
@@ -426,10 +442,10 @@ private fun GenerateButton(modifier: Modifier = Modifier, onGenerateClick: () ->
         shape = RoundedCornerShape(50),
         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
         contentPadding = PaddingValues(0.dp),
-        border = BorderStroke(1.5.dp, Color(0xFFD2FDB9))
+        border = BorderStroke(1.5.dp, borderGradient)
     ) {
         Box(
-            modifier = Modifier.fillMaxSize().background(buttonGradient, RoundedCornerShape(50)),
+            modifier = Modifier.wrapContentSize().background(buttonGradient, RoundedCornerShape(50)).padding(8.dp),
             contentAlignment = Alignment.Center
         ) {
             Row(
@@ -444,8 +460,8 @@ private fun GenerateButton(modifier: Modifier = Modifier, onGenerateClick: () ->
                         .shadow(
                             4.dp,
                             CircleShape,
-                            ambientColor = Color.Black.copy(0.07f),
-                            spotColor = Color.Black.copy(0.07f)
+                            ambientColor = Color.White,
+                            spotColor = Color.White
                         )
                         .clip(CircleShape)
                         .background(
@@ -467,13 +483,13 @@ private fun GenerateButton(modifier: Modifier = Modifier, onGenerateClick: () ->
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 Text(
-                    text = "Generate",
+                    text = "Generate Design",
                     fontSize = 19.67.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.Black
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
                 )
             }
         }

@@ -37,6 +37,7 @@ import com.webscare.interiorismai.data.local.entities.RecentGeneratedEntity
 import com.webscare.interiorismai.ui.CreateAndExplore.RoomsViewModel
 import com.webscare.interiorismai.ui.UiUtils.CloseIconButton
 import com.webscare.interiorismai.utils.GenerationStatus
+import com.webscare.interiorismai.utils.addPressEffect
 import com.webscare.interiorismai.utils.getImageModel
 
 @Composable
@@ -121,7 +122,7 @@ fun ResultScreen(
                     ImageCard(
                         imageUrl = imageModel,
                         isLarge = (index + 1) % 3 == 0,
-                        modifier = Modifier.clickable { onImageClick(index) }
+                        modifier = Modifier.addPressEffect { onImageClick(index) }
                     )
                 }
 

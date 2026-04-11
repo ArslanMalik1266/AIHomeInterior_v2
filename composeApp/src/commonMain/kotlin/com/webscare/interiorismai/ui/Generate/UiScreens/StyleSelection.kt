@@ -46,13 +46,14 @@ fun StyleSelectionScreen(
     searchQuery: String,
     isSearchExpanded: Boolean,
     selectedStyleId: Int?,
-    onStyleSelected: (Int) -> Unit,
+    onStyleSelected: (Int, String) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onSearchExpandedChange: (Boolean) -> Unit
 ) {
     LaunchedEffect(styles, selectedStyleName) {
         if (selectedStyleName == null && styles.isNotEmpty()) {
-            onStyleSelected(styles.first().id)
+            val firstStyle = styles.first()
+            onStyleSelected(firstStyle.id, firstStyle.name)
         }
     }
 
@@ -111,7 +112,9 @@ fun StyleSelectionScreen(
                     StyleCard(
                         style = style,
                         isSelected = style.id == selectedStyleId,
-                        onClick = { onStyleSelected(style.id) },
+                        onClick = {
+                            println("DEBUG_UI: Clicking Card. Style Name: ${style.name}, Style ID: ${style.id}")
+                            onStyleSelected(style.id, style.name) },
                     )
                 }
             }
@@ -202,7 +205,7 @@ private fun SearchBar(
 private fun StyleCard(
     style: InteriorStyle,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: (InteriorStyle) -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -213,8 +216,9 @@ private fun StyleCard(
                 color = if (isSelected) Color(0xFFCBE0A7) else Color.Transparent,
                 shape = RoundedCornerShape(11.dp)
             )
-            .clickable(onClick = onClick)
-    ) {
+            .clickable {
+                onClick(style)
+            }    ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalPlatformContext.current)
                 .data(style.image)

@@ -18,13 +18,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,6 +47,7 @@ import org.jetbrains.compose.resources.painterResource
 import com.webscare.interiorismai.data.local.entities.RecentGeneratedEntity
 import com.webscare.interiorismai.ui.CreateAndExplore.RoomUiState
 import com.webscare.interiorismai.ui.theme.green_btn
+import com.webscare.interiorismai.utils.addPressEffect
 import com.webscare.interiorismai.utils.getImageModel
 import homeinterior.composeapp.generated.resources.play_fair_italic
 import org.jetbrains.compose.resources.Font
@@ -56,61 +60,88 @@ fun RecentContent(
     tasksProgress: Map<String, Float> = emptyMap(),
     onBundleClick: (RecentGeneratedEntity) -> Unit
 ) {
-    if (generatedBundles.isEmpty() && !isFetching) {
-        // Empty State
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(Res.drawable.emptyimage),
-                contentDescription = null,
-                modifier = Modifier.size(140.dp)
-            )
+    val gridState = rememberLazyGridState()
+    val isScrolled by remember {
+        derivedStateOf {
+            gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 0
         }
-    } else {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // Loading items
-            if (isFetching) {
-                items(state.activeTasksCount) { index ->
-                    val taskList = tasksProgress.values.toList()
-                    val currentProgress = taskList.getOrNull(index) ?: 0f
+    }
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (generatedBundles.isEmpty() && !isFetching) {
+            // Empty State
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(Res.drawable.emptyimage),
+                    contentDescription = null,
+                    modifier = Modifier.size(140.dp)
+                )
+            }
+        } else {
+            LazyVerticalGrid(
+                state = gridState,
+                columns = GridCells.Fixed(2),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Loading items
+                if (isFetching) {
+                    items(state.activeTasksCount) { index ->
+                        val taskList = tasksProgress.values.toList()
+                        val currentProgress = taskList.getOrNull(index) ?: 0f
 
-                    val animatedProgress by animateFloatAsState(
-                        targetValue = currentProgress,
-                        animationSpec = tween(900)
-                    )
+                        val animatedProgress by animateFloatAsState(
+                            targetValue = currentProgress,
+                            animationSpec = tween(900)
+                        )
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(145.dp)
-                            .clip(RoundedCornerShape(11.dp))
-                            .background(Color(0xFFE8E8E8)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(
-                                progress = { animatedProgress },
-                                color = Color(0xFF222222),
-                                modifier = Modifier.size(40.dp)
-                            )
-                            Text(text = "${(animatedProgress * 100).toInt()}%")
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(145.dp)
+                                .clip(RoundedCornerShape(11.dp))
+                                .background(Color(0xFFE8E8E8)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(
+                                    progress = { animatedProgress },
+                                    color = Color(0xFF222222),
+                                    modifier = Modifier.size(40.dp)
+                                )
+                                Text(text = "${(animatedProgress * 100).toInt()}%")
+                            }
                         }
                     }
                 }
-            }
 
-            // Generated bundles with multi-image preview
-            items(generatedBundles) { bundle ->
-                BundleCard(bundle = bundle, onClick = { onBundleClick(bundle) })
+                // Generated bundles with multi-image preview
+                items(generatedBundles) { bundle ->
+                    BundleCard(bundle = bundle, onClick = { onBundleClick(bundle) })
+                }
             }
+        }
+        if (isScrolled) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White,
+                                Color.White.copy(alpha = 0.8f),
+                                Color.White.copy(alpha = 0.5f),
+                                Color.White.copy(alpha = 0.2f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
         }
     }
 }
@@ -127,9 +158,8 @@ private fun BundleCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(145.dp)
+            .addPressEffect { onClick() }
             .clip(RoundedCornerShape(11.dp))
-            .background(Color(0xFFF5F5F5))
-            .clickable { onClick() }
     ) {
         if (imageCount > 0) {
             SingleImageCover(bundle.localPaths[0], bundle.imageUrls.getOrNull(0))

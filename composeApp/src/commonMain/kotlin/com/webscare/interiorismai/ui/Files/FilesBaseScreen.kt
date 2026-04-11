@@ -71,7 +71,7 @@ fun FilesScreen(
                     lineHeight = 16.sp
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 TabRow(
                     selectedTabIndex = selectedTabIndex.value,

@@ -352,11 +352,15 @@ class RoomsViewModel(
             }
 
             is RoomEvent.OnStyleSelected -> {
+                println("DEBUG_VM: Searching for ID: ${event.styleId}")
+                println("DEBUG_VM: Available Styles Count: ${_state.value.availableInteriorStyles.size}")
+
                 val style = _state.value.availableInteriorStyles.firstOrNull { it.id == event.styleId }
+                println("DEBUG_VM: Found Style Name: ${style?.name} for ID: ${event.styleId}") // 👈 ADD THIS
                 _state.update {
                     it.copy(
                         selectedStyleId = event.styleId,
-                        selectedStyleName = style?.name
+                        selectedStyleName =event.styleName
                     )
                 }
             }
@@ -372,13 +376,27 @@ class RoomsViewModel(
             is RoomEvent.OnPaletteSelected -> {
                 _state.value = _state.value.copy(selectedPaletteId = event.paletteId)
             }
+            is RoomEvent.OnShuffleRooms -> {
+                _state.update { it.copy(
+                    filteredRooms = it.filteredRooms.shuffled()
+                )}
+            }
 
             is RoomEvent.OnGenerateClick -> {
                 val newTaskId = generateTaskId()
                 _tasksStatus.update { it + (newTaskId to GenerationStatus.RUNNING) }
                 _tasksProgress.update { it + (newTaskId to 0.0f) }
                 val capturedPrompt = buildPromptFromState(_state.value)
+                println("🔴 FULL_PROMPT_START")
+                capturedPrompt.chunked(3000).forEachIndexed { index, chunk ->
+                    println("🔴 PROMPT_CHUNK_$index: $chunk")
+                }
+                println("🔴 FULL_PROMPT_END")
                 val capturedImageBytes = event.imageBytes
+                println("DEBUG_PALETTE: selectedPaletteId = ${_state.value.selectedPaletteId}")
+                println("DEBUG_PALETTE: availableColors size = ${_state.value.availableColors.size}")
+                println("DEBUG_PALETTE: prompt contains neutral = ${capturedPrompt.contains("neutral tones")}")
+
 
                 // Credits check (Aapka existing logic)
                 val currentCredits = if (authViewModel.state.value.email.isNullOrBlank()) {

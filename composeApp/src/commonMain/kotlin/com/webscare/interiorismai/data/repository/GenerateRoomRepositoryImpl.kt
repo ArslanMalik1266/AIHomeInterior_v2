@@ -8,7 +8,7 @@ import com.webscare.interiorismai.domain.model.GenerateRoomResult
 import com.webscare.interiorismai.domain.repo.GenerateRoomRepository
 
 class GenerateRoomRepositoryImpl(
-    private val roomService: RoomService
+    private val roomService: RoomService,
 ) : GenerateRoomRepository {
 
     override suspend fun generateRoom(
