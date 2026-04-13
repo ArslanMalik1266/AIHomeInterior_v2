@@ -337,6 +337,16 @@ class RoomsViewModel(
                     _state.value = _state.value.copy(currentPage = currentPage - 1)
                 }
             }
+            is RoomEvent.SetTemplateDetails -> {
+                val matchedPaletteId = _state.value.availableColors.firstOrNull { palette ->
+                    palette.colors.map { it.toRawHex() } == event.colors
+                }?.id ?: 0
+                _state.update { it.copy(
+                    selectedRoomType = event.style,
+                    selectedStyleName = event.type,
+                    selectedPaletteId = matchedPaletteId
+                ) }
+            }
 
             // Room type / style / palette selection events
             is RoomEvent.OnRoomTypeSelected -> {
@@ -415,6 +425,7 @@ class RoomsViewModel(
                     activeTasksCount = it.activeTasksCount + 1,
                     isFetchingImages = true,
                     isGenerating = true,
+                    selectedImageBytes = null,
                     errorMessage = null,
                     generatedCount = 3,
                     generatedImagesEntity = it.generatedImagesEntity + RecentGeneratedEntity(

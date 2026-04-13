@@ -17,7 +17,11 @@ sealed class RoomEvent {
     data class SetEditMode(val isEdit: Boolean) : RoomEvent()
     object OnShuffleRooms : RoomEvent()
 
-
+    data class SetTemplateDetails(
+        val style: String,
+        val type: String,
+        val colors: List<String>
+    ) : RoomEvent()
 
     data class SetImageBytes(val bytes: ByteArray, val fileName: String) : RoomEvent()
 

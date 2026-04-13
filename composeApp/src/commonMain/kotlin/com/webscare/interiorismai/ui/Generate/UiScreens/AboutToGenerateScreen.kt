@@ -33,13 +33,17 @@ import com.webscare.interiorismai.ui.CreateAndExplore.RoomEvent
 import com.webscare.interiorismai.ui.CreateAndExplore.RoomsViewModel
 import com.webscare.interiorismai.ui.UiUtils.CloseIconButton
 import com.webscare.interiorismai.ui.authentication.AuthViewModel
+import homeinterior.composeapp.generated.resources.add_icon
 
 @Composable
 fun AboutToGenerateScreen(
     roomsViewModel: RoomsViewModel = koinViewModel(),
     authViewModel: AuthViewModel,
     onCloseClick: () -> Unit,
+    imageUrl: String?,
     onResult: () -> Unit,
+    isFromExplore: Boolean = false,
+    isEditable: Boolean = true,
     onSubscriptionClick: () -> Unit,
     onEditType: () -> Unit = {},
     onEditStyle: () -> Unit = {},
@@ -88,7 +92,8 @@ fun AboutToGenerateScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
-                imageBytes = state.selectedImageBytes
+                imageBytes = state.selectedImageBytes,
+                imageUrl = imageUrl
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -98,6 +103,7 @@ fun AboutToGenerateScreen(
                 value = selectedType,
                 borderColor = selectedBorderColor,
                 onEditClick = onEditType,
+                isEditable = isEditable,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
@@ -110,6 +116,7 @@ fun AboutToGenerateScreen(
                 value = selectedStyle,
                 borderColor = borderColor,
                 onEditClick = onEditStyle,
+                isEditable = isEditable,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
@@ -122,6 +129,7 @@ fun AboutToGenerateScreen(
                     borderColor = Color(0xFFCBE0A7),
                     paletteColors = palette.colors,
                     onEditClick = onEditPalette,
+                    isEditable = isEditable,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
@@ -131,50 +139,59 @@ fun AboutToGenerateScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             GenerateButton(
-
-                modifier = Modifier.wrapContentSize().align(Alignment.CenterHorizontally)
+                modifier = Modifier.wrapContentSize().align(Alignment.CenterHorizontally),
+                isFromExplore = isFromExplore
             ) {
                 println("DEBUG_GENERATE: Button Clicked!")
                 println("DEBUG_GENERATE: totalCredits = ${authState.totalCredits}")
                 println("DEBUG_GENERATE: freeCredits = ${authState.freeCredits}")
                 println("DEBUG_GENERATE: selectedImageBytes = ${state.selectedImageBytes?.size}")
                 println("DEBUG_GENERATE: isGenerating = ${state.isGenerating}")
-                val effectiveCredits = if (authState.email.isNullOrBlank()) {
-                    // Guest — authViewModel se guestSession lo
-                    authViewModel.guestSession.value?.totalCredits ?: 0
-                } else {
-                    authState.totalCredits
-                }
 
-                println("DEBUG_GENERATE: effectiveCredits = $effectiveCredits")
+                if (isFromExplore) {
+                    println("DEBUG_GENERATE: Explore flow detected, triggering onResult to open gallery")
+                    onResult()
+                } else
+                {
+                    val effectiveCredits = if (authState.email.isNullOrBlank()) {
+                        // Guest — authViewModel se guestSession lo
+                        authViewModel.guestSession.value?.totalCredits ?: 0
+                    } else {
+                        authState.totalCredits
+                    }
 
-                if (effectiveCredits > 0) {
-                    println("DEBUG_GENERATE: Credits available, starting generation...")
+                    println("DEBUG_GENERATE: effectiveCredits = $effectiveCredits")
 
-                    coroutineScope.launch {
-                        val bytes = state.selectedImageBytes
-                        val fileName = state.selectedFileName ?: "room_image.jpg"
-                        println("DEBUG_GENERATE: bytes = ${bytes?.size}, fileName = $fileName")
+                    if (effectiveCredits > 0) {
+                        println("DEBUG_GENERATE: Credits available, starting generation...")
+
+                        coroutineScope.launch {
+                            val bytes = state.selectedImageBytes
+                            val fileName = state.selectedFileName ?: "room_image.jpg"
+                            println("DEBUG_GENERATE: bytes = ${bytes?.size}, fileName = $fileName")
 
 
-                        if (bytes != null) {
-                            println("DEBUG_GENERATE: Calling OnGenerateClick...")
+                            if (bytes != null) {
+                                println("DEBUG_GENERATE: Calling OnGenerateClick...")
 
-                            roomsViewModel.onRoomEvent(
-                                RoomEvent.OnGenerateClick(imageBytes = bytes, fileName = fileName)
+                                roomsViewModel.onRoomEvent(
+                                    RoomEvent.OnGenerateClick(
+                                        imageBytes = bytes,
+                                        fileName = fileName
+                                    )
+                                )
+                            } else {
+                                println("DEBUG_GENERATE: bytes is NULL!")
+                            }
+                        }
+                    } else {
+                        println("DEBUG_GENERATE: No credits! Showing snackbar...")
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "You've run out of credits to generate designs.",
+                                duration = SnackbarDuration.Short
                             )
                         }
-                        else{
-                            println("DEBUG_GENERATE: bytes is NULL!")
-                        }
-                    }
-                } else {
-                    println("DEBUG_GENERATE: No credits! Showing snackbar...")
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar(
-                            message = "You've run out of credits to generate designs.",
-                            duration = SnackbarDuration.Short
-                        )
                     }
                 }
             }
@@ -284,7 +301,7 @@ fun TopBar(onCloseClick: () -> Unit) {
 }
 
 @Composable
-private fun ImagePreview(modifier: Modifier = Modifier, imageBytes: ByteArray?) {
+private fun ImagePreview(modifier: Modifier = Modifier, imageBytes: ByteArray?, imageUrl: String?) {
     Box(
         modifier = modifier
             .fillMaxHeight(0.45f)
@@ -292,12 +309,10 @@ private fun ImagePreview(modifier: Modifier = Modifier, imageBytes: ByteArray?) 
             .background(Color(0xFFF5F5F5))
     ) {
         if (imageBytes != null) {
-            AsyncImage(
-                model = imageBytes,
-                contentDescription = "Room Preview",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
+            // User ki apni select ki hui photo
+            AsyncImage(model = imageBytes, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        } else if (!imageUrl.isNullOrEmpty()) {
+            AsyncImage(model = imageUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         } else {
             Text(text = "No Image Selected", modifier = Modifier.align(Alignment.Center))
         }
@@ -310,7 +325,9 @@ private fun SelectionCard(
     value: String,
     borderColor: Color,
     onEditClick: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isEditable: Boolean = true
+
 ) {
     val backgroundColor = Color(0xFFFFFFFF).copy(alpha = 0.57f)
     val mediumText = Color(0xFF4D4D4D)
@@ -343,16 +360,18 @@ private fun SelectionCard(
                 lineHeight = 20.sp
             )
         }
+        if (isEditable) {
 
-        Icon(
-            painter = painterResource(Res.drawable.edit_icon),
-            contentDescription = "Edit",
-            tint = editIconColor,
-            modifier = Modifier
-                .size(22.dp)
-                .align(Alignment.CenterEnd)
-                .clickable { onEditClick() }
-        )
+            Icon(
+                painter = painterResource(Res.drawable.edit_icon),
+                contentDescription = "Edit",
+                tint = editIconColor,
+                modifier = Modifier
+                    .size(22.dp)
+                    .align(Alignment.CenterEnd)
+                    .clickable { onEditClick() }
+            )
+        }
     }
 }
 
@@ -362,6 +381,7 @@ private fun ColorPaletteCard(
     paletteColors: List<Color>,
     modifier: Modifier = Modifier,
     onEditClick: () -> Unit = {},
+    isEditable: Boolean = true
 ) {
     val backgroundColor = Color(0xFFFFFFFF).copy(alpha = 0.57f)
     val lightGrayText = Color(0xFF90918F)
@@ -404,19 +424,20 @@ private fun ColorPaletteCard(
                 color = lightGrayText
             )
         }
-
-        Icon(
-            painter = painterResource(Res.drawable.edit_icon),
-            contentDescription = "Edit",
-            tint = editIconColor,
-            modifier = Modifier.size(22.dp).align(Alignment.CenterEnd)
-                .clickable { onEditClick() }
-        )
+        if (isEditable) {
+            Icon(
+                painter = painterResource(Res.drawable.edit_icon),
+                contentDescription = "Edit",
+                tint = editIconColor,
+                modifier = Modifier.size(22.dp).align(Alignment.CenterEnd)
+                    .clickable { onEditClick() }
+            )
+        }
     }
 }
 
 @Composable
-private fun GenerateButton(modifier: Modifier = Modifier, onGenerateClick: () -> Unit) {
+private fun GenerateButton(modifier: Modifier = Modifier,isFromExplore: Boolean, onGenerateClick: () -> Unit) {
     val buttonGradient = Brush.linearGradient(
         colorStops = arrayOf(
             0.0288f to Color(0xFF34D399).copy(alpha = 0.7f),
@@ -476,9 +497,19 @@ private fun GenerateButton(modifier: Modifier = Modifier, onGenerateClick: () ->
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        painter = painterResource(Res.drawable.generate),
+                        painter = painterResource(
+                            if (isFromExplore) Res.drawable.add_icon else Res.drawable.generate
+                        ),
                         contentDescription = "Generate Icon",
-                        tint = Color(0xFFFFD13A),
+
+                        tint = if (isFromExplore){
+                            Color(0xFFFFFFFF)
+
+                        }else
+                        {
+                            Color(0xFFFFD13A)
+
+                        },
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -486,7 +517,7 @@ private fun GenerateButton(modifier: Modifier = Modifier, onGenerateClick: () ->
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Text(
-                    text = "Generate Design",
+                    text = if (isFromExplore) "Upload my Room" else "Generate Design",
                     fontSize = 19.67.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White

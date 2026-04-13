@@ -27,13 +27,17 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -89,6 +93,7 @@ import com.webscare.interiorismai.utils.GenerationStatus
 import com.webscare.interiorismai.utils.getPlatformContext
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BaseBottomBarScreen(
     rootNavController: NavHostController,
@@ -102,9 +107,16 @@ fun BaseBottomBarScreen(
 
     val roomViewModel: RoomsViewModel = koinViewModel()
     var showGallery by remember { mutableStateOf(false) }
+    var isFromExplore by remember { mutableStateOf(false) }
 
 
     val scope = rememberCoroutineScope()
+    val scaffoldState = rememberBottomSheetScaffoldState(
+        bottomSheetState = rememberStandardBottomSheetState(
+            initialValue = SheetValue.PartiallyExpanded, // Shuru mein sirf peek dikhayega
+            skipHiddenState = false // Aap isy AnimatedVisibility ki tarah hide bhi kar sakte hain
+        )
+    )
     val tasksStatus by roomViewModel.tasksStatus.collectAsState()
     val tasksProgress by roomViewModel.tasksProgress.collectAsState()
     val roomState by roomViewModel.state.collectAsState()
@@ -329,12 +341,15 @@ fun BaseBottomBarScreen(
                             navController.navigate(Routes.AbtToGenerate)
                         },
                         onRoomClick = { room ->
-
-
+                            val hexColors = room.colors.map { color ->
+                                roomViewModel.run { color.toRawHex() }
+                            }
                             navController.navigate(
-                                Routes.FileEdit(
+                                Routes.AbtToGenerateWithData(
                                     imageUrl = room.imageUrl,
-                                    entityId = room.id.toLong()
+                                    style = room.roomStyle,
+                                    type = room.roomType,
+                                    colors = hexColors
                                 )
                             )
                         },
@@ -359,9 +374,88 @@ fun BaseBottomBarScreen(
                     ExploreScreen(
                         viewModel = roomViewModel,
                         onRoomClick = { room ->
-                            navController.navigate(Routes.FileEdit(imageUrl = room.imageUrl))
+                            val hexColors = room.colors.map { color ->
+                                roomViewModel.run { color.toRawHex() }
+                            }
+                            navController.navigate(
+                                Routes.AbtToGenerateWithData(
+                                    imageUrl = room.imageUrl,
+                                    style = room.roomStyle,
+                                    type = room.roomType,
+                                    colors = hexColors
+                                )
+                            )
                         }
                     )
+                }
+                composable<Routes.AbtToGenerateWithData> { backStackEntry ->
+                    val args = backStackEntry.toRoute<Routes.AbtToGenerateWithData>()
+                    var showGallery by remember { mutableStateOf(false) }
+                    var localIsFromExplore by remember { mutableStateOf(true) }
+                    var localImageUrl by remember { mutableStateOf(args.imageUrl) }
+                    val state by roomViewModel.state.collectAsState()
+
+                    // Update the ViewModel state so the screen shows the correct details
+                    LaunchedEffect(Unit) {
+                        // ViewModel mein ye "Khobiaan" save kar dein
+                        roomViewModel.onRoomEvent(
+                            RoomEvent.SetTemplateDetails(
+                                style = args.style,
+                                type = args.type,
+                                colors = args.colors
+                            )
+                        )
+                    }
+
+
+                    AboutToGenerateScreen(
+                        roomsViewModel = roomViewModel,
+                        authViewModel = authViewModel,
+                        isEditable = false,
+                        imageUrl = localImageUrl,
+                        isFromExplore = localIsFromExplore,
+                        onCloseClick = { navController.popBackStack() },
+                        onResult = {
+                            if (localIsFromExplore) {
+                                showGallery = true // Sirf tab gallery khule jab "Upload my Room" wala button ho
+                            }
+                        },
+                        onSubscriptionClick = { navController.navigate(Routes.Subscription) },
+                        onEditType = {
+
+                        },
+                        onEditStyle = {
+
+                        },
+                        onEditPalette = {
+
+                        }
+                    )
+                    if (showGallery) {
+                        GalleryPickerLauncher(
+                            onPhotosSelected = { photos ->
+                                val photo = photos.first()
+                                val bytes = uriToByteArray(platformContext, photo.uri.toString())
+                                val fileName = "room_upload.jpg"
+
+                                roomViewModel.onRoomEvent(RoomEvent.SetImageBytes(bytes, fileName))
+
+                                showGallery = false
+
+                                // Yahan ab 'localIsFromExplore' unresolved nahi hoga
+                                if (localIsFromExplore) {
+                                    localImageUrl = photo.uri.toString()
+                                    localIsFromExplore = false
+                                } else {
+                                    navController.navigate(Routes.AddScreen)
+                                }
+                            },
+                            onError = { showGallery = false },
+                            onDismiss = { showGallery = false },
+                            allowMultiple = false,
+                            selectionLimit = 1
+                        )
+                    }
                 }
 
                 composable<Routes.Files> {
@@ -407,7 +501,8 @@ fun BaseBottomBarScreen(
                             }
                         },
                         onCloseClick = {
-                            val previousRoute = navController.previousBackStackEntry?.destination?.route
+                            val previousRoute =
+                                navController.previousBackStackEntry?.destination?.route
                             println("DEBUG_ADDSCREEN_CLOSE: previousRoute = $previousRoute")
                             roomViewModel.onRoomEvent(RoomEvent.SetEditMode(false))
                             navController.popBackStack()
@@ -497,6 +592,7 @@ fun BaseBottomBarScreen(
                 }
                 composable<Routes.AbtToGenerate> {
                     AboutToGenerateScreen(
+                        imageUrl = null,
                         roomsViewModel = roomViewModel,
                         authViewModel = authViewModel,
                         onCloseClick = {
@@ -615,13 +711,13 @@ fun BaseBottomBarScreen(
                     )
                 }
             }
-
             AnimatedVisibility(
                 visible = isRunning,
                 enter = slideInVertically(initialOffsetY = { it }),
                 exit = slideOutVertically(targetOffsetY = { it }),
                 modifier = Modifier.align(Alignment.BottomCenter)
-            ) {
+            )
+            {
                 Row(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -776,6 +872,7 @@ fun BaseBottomBarScreen(
 
                     showGallery = false
                     navController.navigate(Routes.AddScreen)
+
                 },
                 onError = { showGallery = false },
                 onDismiss = { showGallery = false },

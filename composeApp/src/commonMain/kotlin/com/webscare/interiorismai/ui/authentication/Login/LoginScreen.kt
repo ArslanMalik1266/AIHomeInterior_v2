@@ -1,5 +1,6 @@
 package com.webscare.interiorismai.ui.authentication.Login
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -7,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -37,11 +39,12 @@ import com.webscare.interiorismai.ui.theme.green_btn
 import com.webscare.interiorismai.ui.theme.grey_border
 import com.webscare.interiorismai.ui.theme.smallText
 import com.webscare.interiorismai.ui.theme.white_color
+import homeinterior.composeapp.generated.resources.google_logo
 
 @Composable
 fun LoginRoot(authViewModel: AuthViewModel = koinViewModel(), navController: NavHostController, onBackClick: (() -> Unit)? = null) {
     val state by authViewModel.state.collectAsState()
-    LoginScreen(navController, authViewModel.uiEvent, state, authViewModel::onRegisterFormEvent,onBackClick)
+    LoginScreen(authViewModel,navController, authViewModel.uiEvent, state, authViewModel::onRegisterFormEvent,onBackClick)
 }
 
 fun isValidEmail(email: String): Boolean {
@@ -51,6 +54,7 @@ fun isValidEmail(email: String): Boolean {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
+    authViewModel: AuthViewModel,
     navController: NavHostController,
     uiEvent: SharedFlow<CommonUiEvent>,
     state: RegisterState,
@@ -182,6 +186,50 @@ fun LoginScreen(
                 color = Color(0xffD2CECE),
                 modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp, horizontal = 10.dp)
             )
+
+            Button(
+                onClick = {
+                    authViewModel.loginWithGoogle()
+                },
+                enabled = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                // Transparent background set karein
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent
+                ),
+                // Grey stroke (border) add karein
+                border = BorderStroke(
+                    width = 1.dp,
+                    color =Color.Gray
+                )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center // Content ko start se shuru karein
+                ) {
+                    Image(
+                        painter = painterResource(Res.drawable.google_logo),
+                        contentDescription = "Google Icon",
+                        modifier = Modifier.size(24.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = "Continue with Google",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color =  Color.Black ,
+                        modifier = Modifier.padding(end = 24.dp)
+                    )
+
+                }
+            }
 
         }
         if (state.loginResponse is ResultState.Loading) {

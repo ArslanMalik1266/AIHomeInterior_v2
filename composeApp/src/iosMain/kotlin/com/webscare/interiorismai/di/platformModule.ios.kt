@@ -7,6 +7,7 @@ import org.koin.dsl.module
 import com.webscare.interiorismai.data.local.AppDatabase
 import com.webscare.interiorismai.data.local.getDatabaseBuilder
 import com.webscare.interiorismai.utils.BackgroundTaskScheduler
+import com.webscare.interiorismai.utils.GoogleSignInHelper
 import platform.BackgroundTasks.BGProcessingTaskRequest
 import platform.BackgroundTasks.BGTaskScheduler
 import platform.Foundation.NSDate
@@ -46,4 +47,6 @@ actual fun platformModule(): Module = module {
             }
         }
     }
+    single { GoogleSignInHelper() }
+
 }

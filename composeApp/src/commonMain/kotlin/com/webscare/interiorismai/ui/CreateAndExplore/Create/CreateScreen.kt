@@ -44,6 +44,7 @@ import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.compose.SubcomposeAsyncImage
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.webscare.interiorismai.ui.theme.green_btn
@@ -192,7 +193,7 @@ fun Header(onClick: () -> Unit) {
                     Image(
                         painter = painterResource(Res.drawable.ic_subscriptions),
                         contentDescription = "",
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(40.dp)
                     )
                 }
             }
@@ -352,6 +353,10 @@ private fun RoomCategoryCard(room: RoomUi, modifier: Modifier = Modifier, onClic
             model = ImageRequest.Builder(LocalPlatformContext.current)
                 .data(room.imageUrl)
                 .crossfade(true)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .diskCacheKey(room.imageUrl.hashCode().toString())
+                .memoryCacheKey(room.imageUrl.hashCode().toString())
                 .build(),
             contentDescription = room.roomType,
             modifier = Modifier.fillMaxSize(),

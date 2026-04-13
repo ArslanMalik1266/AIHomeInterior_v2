@@ -24,10 +24,7 @@ class MainActivity : ComponentActivity() {
         AppContext.setActivity(this)  // ✅
     }
 
-    override fun onPause() {
-        super.onPause()
-        AppContext.clearActivity()  // ✅
-    }
+
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->

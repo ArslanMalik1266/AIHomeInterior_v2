@@ -75,6 +75,7 @@ fun ProfileScreen(
                 is CommonUiEvent.ShowSuccess -> {
                     println("DEBUG_UI: Success = ${event.message}")
                 }
+                else -> {}
             }
         }
     }

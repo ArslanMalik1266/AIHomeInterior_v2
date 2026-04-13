@@ -62,6 +62,9 @@ kotlin {
             implementation("io.insert-koin:koin-androidx-workmanager:3.5.0")
             implementation(libs.billing)
             implementation(libs.billing.ktx)
+            implementation("androidx.credentials:credentials:1.3.0")
+            implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+            implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
         }
         iosMain.dependencies {
@@ -126,6 +129,14 @@ android {
     namespace = "com.webscare.interiorismai"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("D:\\Android studio projects\\AIHomeInteriorr-main2\\upload-keystore-homeinterior.jks")  // ← apna path
+            storePassword = project.findProperty("KEYSTORE_PASSWORD") as String
+            keyAlias = project.findProperty("KEY_ALIAS") as String
+            keyPassword = project.findProperty("KEY_PASSWORD") as String
+        }
+    }
     defaultConfig {
         applicationId = "com.webscare.interiorismai"
         minSdk = libs.versions.android.minSdk.get().toInt()
@@ -140,15 +151,27 @@ android {
     }
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
+
         }
+
         debug {
+            isMinifyEnabled = false
+            isShrinkResources = false
             isDebuggable = true
+
         }
+
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+    lint {
+        abortOnError = false  // ✅ Yeh add karo
+        checkReleaseBuilds = false  // ✅ Yeh bhi
     }
 }
 

@@ -29,7 +29,8 @@ val viewModelModule = module {
             resendOtpUseCase = get(),
             registerGuestUseCase = get(),
             repository = get(),
-            settings = get()
+            settings = get(),
+            googleSignInHelper = get()
         )
     }
 

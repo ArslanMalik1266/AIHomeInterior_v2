@@ -93,4 +93,12 @@ sealed class Routes {
 
     @Serializable
     data class CreateEdit(val imageUrl: String) : Routes()
+    @Serializable
+    @SerialName("generate_with_data")
+    data class AbtToGenerateWithData(
+        val imageUrl: String,
+        val style: String,
+        val type: String,
+        val colors: List<String> // Added color palette
+    ) : Routes()
 }

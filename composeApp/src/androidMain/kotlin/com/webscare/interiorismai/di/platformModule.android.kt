@@ -9,6 +9,7 @@ import com.webscare.interiorismai.data.local.AppDatabase
 import com.webscare.interiorismai.data.local.getDatabaseBuilder
 import com.webscare.interiorismai.utils.AndroidTaskScheduler
 import com.webscare.interiorismai.utils.BackgroundTaskScheduler
+import com.webscare.interiorismai.utils.GoogleSignInHelper
 import com.webscare.interiorismai.utils.ImageStatusWorker
 
 actual fun platformModule(): Module = module{
@@ -18,4 +19,7 @@ actual fun platformModule(): Module = module{
     single<BackgroundTaskScheduler> { AndroidTaskScheduler(get()) }
 
     // Worker register karein
-    worker { ImageStatusWorker(get(), get()) }}
+    worker { ImageStatusWorker(get(), get()) }
+    single { GoogleSignInHelper(androidContext()) }
+
+}

@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.Dp
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.compose.SubcomposeAsyncImage
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import homeinterior.composeapp.generated.resources.roomplaceholder
@@ -406,6 +407,10 @@ private fun RoomImageCard(
             model = ImageRequest.Builder(LocalPlatformContext.current)
                 .data(room.imageUrl)
                 .crossfade(true)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .diskCacheKey(room.imageUrl.hashCode().toString())
+                .memoryCacheKey(room.imageUrl.hashCode().toString())
                 .build(),
             contentDescription = room.roomType,
             modifier = Modifier.fillMaxSize(),

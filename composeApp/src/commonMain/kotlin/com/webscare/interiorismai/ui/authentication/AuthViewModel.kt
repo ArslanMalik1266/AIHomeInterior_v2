@@ -31,6 +31,7 @@ import com.webscare.interiorismai.ui.authentication.register.RegisterState
 import com.webscare.interiorismai.ui.common.base.CommonUiEvent
 import com.webscare.interiorismai.ui.common.base.CommonUiEvent.*
 import com.webscare.interiorismai.utils.Constants
+import com.webscare.interiorismai.utils.GoogleSignInHelper
 import com.webscare.interiorismai.utils.getDeviceId
 
 class AuthViewModel(private val verifyOtpUseCase: VerifyOtpUseCase,
@@ -38,6 +39,8 @@ class AuthViewModel(private val verifyOtpUseCase: VerifyOtpUseCase,
                     private val logoutUseCase: LogoutUseCase,
                     private val resendOtpUseCase: ResendOtpUseCase,
                     private val registerGuestUseCase: RegisterGuestUseCase,
+                    private val googleSignInHelper: GoogleSignInHelper,
+
                     val repository: AuthRepository, val settings: Settings) : ViewModel() {
     private val _state = MutableStateFlow(RegisterState())
     val state: StateFlow<RegisterState> = _state.asStateFlow()
@@ -117,6 +120,30 @@ class AuthViewModel(private val verifyOtpUseCase: VerifyOtpUseCase,
             else -> onRegisterFormEvent(event)
         }
     }
+
+    fun loginWithGoogle() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+
+            val result = googleSignInHelper.signIn()
+
+            if (result.isSuccess) {
+                // Aapka sharedViewModel.loginWithGoogle(email) wala logic yahan
+                _uiEvent.emit(CommonUiEvent.NavigateToHome)
+            } else {
+                _uiEvent.emit(CommonUiEvent.ShowError(result.error ?: "Sign in failed"))  // ✅
+            }
+
+            _state.update { it.copy(isLoading = false) }
+        }
+    }
+    data class AuthState(val isLoading: Boolean = false)
+
+    sealed class AuthUiEvent {
+        data class ShowError(val message: String) : AuthUiEvent()
+        object NavigateToHome : AuthUiEvent()
+    }
+
 
     fun fetchUserDetails() {
         val savedEmail = settings.getString("user_email", "")
