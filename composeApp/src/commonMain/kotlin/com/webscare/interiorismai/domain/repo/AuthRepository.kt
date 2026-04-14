@@ -11,6 +11,13 @@ interface AuthRepository {
         userEmail: String,
         authProvider: String
     ): Result<VerifyResponse>
+
+//    suspend fun loginWithGoogle(
+//        packageName: String,
+//        deviceId: String,
+//        userEmail: String,
+//        authProvider: String
+//    ): Result<VerifyResponse>
     suspend fun verifyOtp(
         packageName: String,
         deviceId: String,

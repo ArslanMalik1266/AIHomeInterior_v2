@@ -24,7 +24,7 @@ data class RoomUiState(
     val isResultSheetExpanded: Boolean = false,
     val selectedTaskId: String? = null,
     val expandedSection: FilterSection? = null,
-
+    var isFromExplore: Boolean = false,
 
 
     val filterState: FilterState = FilterState(),
@@ -62,9 +62,11 @@ data class RoomUiState(
     val isGenerating: Boolean = false,
     val generationStatus: GenerationStatus = GenerationStatus.IDLE,
 
+    ///
     val availableInteriorStyles: List<com.webscare.interiorismai.domain.model.InteriorStyle> = emptyList(),
     val availableInteriorTypes: List<InteriorType> = emptyList(),
     val selectedStyleId: Int? = availableInteriorStyles.firstOrNull()?.id,
+    val selectedPalette: ColorPalette? = null,
 
 
     val generatedImages: List<String> = emptyList(),

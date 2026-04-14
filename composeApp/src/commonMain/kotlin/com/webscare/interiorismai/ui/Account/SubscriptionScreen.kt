@@ -136,6 +136,9 @@ package com.webscare.interiorismai.ui.Account
                 onLoginClick()
             }
         }
+        LaunchedEffect(Unit) {
+            roomsViewModel.resetPurchasingState() // ✅ Screen open hote hi reset
+        }
 
         Box(
             modifier = Modifier

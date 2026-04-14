@@ -80,9 +80,13 @@ package com.webscare.interiorismai.ui.Generate.UiScreens
                     ) {
                         items(palettes.size) { index ->
                             ColorPaletteRow(
+
                                 palette = palettes[index],
                                 isSelected = palettes[index].id == selectedPaletteId,
-                                onClick = { onPaletteSelected(palettes[index].id) }
+                                onClick = {
+                                    println("DEBUG_PALETTE: Clicked palette id=${palettes[index].id}, name=${palettes[index].name}")
+                                    println("DEBUG_PALETTE: Current selectedPaletteId=$selectedPaletteId")
+                                    onPaletteSelected(palettes[index].id) }
                             )
                         }
 

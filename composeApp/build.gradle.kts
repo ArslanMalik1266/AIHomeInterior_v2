@@ -10,6 +10,9 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.androidx.room)
+//    alias(libs.plugins.google.services)
+
+
 }
 
 kotlin {
@@ -62,9 +65,10 @@ kotlin {
             implementation("io.insert-koin:koin-androidx-workmanager:3.5.0")
             implementation(libs.billing)
             implementation(libs.billing.ktx)
-            implementation("androidx.credentials:credentials:1.3.0")
-            implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
-            implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+            implementation(libs.credentials)
+            implementation(libs.credentials.play.services.auth)
+            implementation(libs.google.identity.googleid)
+
 
         }
         iosMain.dependencies {
@@ -154,7 +158,10 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
-
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
 
         debug {

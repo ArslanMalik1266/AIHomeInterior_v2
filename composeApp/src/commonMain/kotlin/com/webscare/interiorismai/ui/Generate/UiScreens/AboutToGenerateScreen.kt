@@ -54,12 +54,18 @@ fun AboutToGenerateScreen(
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     var isClosing by remember { mutableStateOf(false) }
-
-
+    val paletteToDisplay = if (state.isFromExplore) {
+        state.availableColors.find { it.id == state.selectedPaletteId }
+            ?: state.selectedPalette
+            ?: state.filterColors.firstOrNull()
+    } else {
+        state.selectedPalette ?: state.filterColors.firstOrNull()
+    }
     val selectedType = state.selectedRoomType ?: ""
     val selectedStyle = state.selectedStyleName ?: ""
     val selectedImage = state.selectedImage
-    val selectedPalette = state.availableColors.firstOrNull { it.id == state.selectedPaletteId }
+    println("DEBUG_ABOUT: selectedPaletteId = ${state.selectedPaletteId}")
+    println("DEBUG_ABOUT: availableColors ids = ${state.availableColors.map { it.id }}")
 
     val backgroundColor = Color(0xFFFFFFFF)
     val borderColor = Color(0xFFD7D6D6)
@@ -84,7 +90,7 @@ fun AboutToGenerateScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            TopBar(onCloseClick)
+            TopBar(roomsViewModel = roomsViewModel,onCloseClick)
 
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -124,7 +130,8 @@ fun AboutToGenerateScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            selectedPalette?.let { palette ->
+            paletteToDisplay?.let { palette ->
+                println("pallatecolors = ${palette.id}")
                 ColorPaletteCard(
                     borderColor = Color(0xFFCBE0A7),
                     paletteColors = palette.colors,
@@ -277,7 +284,7 @@ fun AboutToGenerateScreen(
 }
 
 @Composable
-fun TopBar(onCloseClick: () -> Unit) {
+fun TopBar(roomsViewModel: RoomsViewModel,onCloseClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -286,6 +293,7 @@ fun TopBar(onCloseClick: () -> Unit) {
         horizontalArrangement = Arrangement.Start
     ) {
         CloseIconButton(tint = Color(0xFFB2B0B0)) {
+            roomsViewModel.onRoomEvent(RoomEvent.OnResetState)
             onCloseClick()
         }
 
@@ -510,7 +518,7 @@ private fun GenerateButton(modifier: Modifier = Modifier,isFromExplore: Boolean,
                             Color(0xFFFFD13A)
 
                         },
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(if (isFromExplore) 16.dp else 24.dp)
                     )
                 }
 

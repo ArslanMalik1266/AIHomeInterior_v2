@@ -36,6 +36,7 @@ import com.webscare.interiorismai.utils.getDeviceId
 
 class AuthViewModel(private val verifyOtpUseCase: VerifyOtpUseCase,
                     private val loginUseCase: LoginUseCase,
+//                    private val loginWithGoogleUseCase: LoginWithGoogleUseCase,
                     private val logoutUseCase: LogoutUseCase,
                     private val resendOtpUseCase: ResendOtpUseCase,
                     private val registerGuestUseCase: RegisterGuestUseCase,

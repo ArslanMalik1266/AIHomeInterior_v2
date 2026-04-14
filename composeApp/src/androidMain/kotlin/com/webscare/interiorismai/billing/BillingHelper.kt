@@ -12,28 +12,68 @@ actual class BillingHelper actual constructor(
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var productDetailsList = listOf<ProductDetails>()
+    private var pendingProductId: String? = null
 
-    private val billingClient = BillingClient.newBuilder(AppContext.get())
-        .enablePendingPurchases(
-            PendingPurchasesParams.newBuilder()
-                .enableOneTimeProducts()
-                .build()
-        )
-        .setListener { result, purchases ->
-            if (result.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
-                purchases.forEach { handlePurchase(it) }
-            }else {
-                mainHandler.post { onPurchaseCancelled() }
+    // ✅ val → var
+    private var billingClient = createBillingClient()
+
+    // ✅ Naya client factory
+    private fun createBillingClient(): BillingClient {
+        return BillingClient.newBuilder(AppContext.get())
+            .enablePendingPurchases(
+                PendingPurchasesParams.newBuilder()
+                    .enableOneTimeProducts()
+                    .build()
+            )
+            .setListener { result, purchases ->
+                println("🟣 BILLING LISTENER: code=${result.responseCode}")
+                if (result.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
+                    purchases.forEach { handlePurchase(it) }
+                } else {
+                    mainHandler.post { onPurchaseCancelled() }
+                }
             }
-        }
-        .build()
+            .build()
+    }
 
     actual fun startConnection() {
+        // ✅ CLOSED hai to naya client banao
+        if (billingClient.connectionState == BillingClient.ConnectionState.CLOSED) {
+            println("⚠️ BILLING: Client CLOSED — creating fresh instance")
+            billingClient = createBillingClient()
+            productDetailsList = listOf()
+        }
+
+        if (billingClient.isReady) {
+            println("✅ BILLING: Already ready")
+            pendingProductId?.let { productId ->
+                pendingProductId = null
+                launchPurchase(productId)
+            }
+            return
+        }
+
+        println("⚠️ BILLING: Starting connection... state=${billingClient.connectionState}")
         billingClient.startConnection(object : BillingClientStateListener {
-            override fun onBillingServiceDisconnected() {}
+            override fun onBillingServiceDisconnected() {
+                println("⚠️ BILLING: Disconnected — retrying in 2s")
+                mainHandler.postDelayed({ startConnection() }, 2000)
+            }
+
             override fun onBillingSetupFinished(result: BillingResult) {
+                println("✅ BILLING: SetupFinished code=${result.responseCode}")
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                     queryProducts()
+                    pendingProductId?.let { productId ->
+                        println("✅ BILLING: Launching pending: $productId")
+                        mainHandler.postDelayed({
+                            pendingProductId = null
+                            launchPurchase(productId)
+                        }, 1000)
+                    }
+                } else {
+                    println("❌ BILLING: Setup failed code=${result.responseCode} — retrying in 3s")
+                    mainHandler.postDelayed({ startConnection() }, 3000)
                 }
             }
         })
@@ -49,10 +89,7 @@ actual class BillingHelper actual constructor(
         billingClient.queryProductDetailsAsync(
             QueryProductDetailsParams.newBuilder().setProductList(products).build()
         ) { result, detailsResult ->
-            println("🔴 BILLING: responseCode=${result.responseCode}")
-            println("🔴 BILLING: message=${result.debugMessage}")
-            println("🔴 BILLING: productsCount=${detailsResult.productDetailsList?.size}")
-
+            println("🔴 BILLING: responseCode=${result.responseCode} count=${detailsResult.productDetailsList?.size}")
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                 productDetailsList = detailsResult.productDetailsList ?: emptyList()
                 val mapped = productDetailsList.map { p ->
@@ -64,37 +101,60 @@ actual class BillingHelper actual constructor(
                     )
                 }
                 println("🔴 BILLING: mapped=${mapped.size} products")
-
                 mainHandler.post { onProductsLoaded(mapped) }
             }
         }
     }
 
     actual fun launchPurchase(productId: String): Boolean {
-        println("🔴 LAUNCH 1: productId=$productId")
-        println("🔴 LAUNCH 2: productDetailsList size=${productDetailsList.size}")
-        println("🔴 LAUNCH 3: productDetailsList ids=${productDetailsList.map { it.productId }}")
+        println("🔴 LAUNCH 1: isReady=${billingClient.isReady} state=${billingClient.connectionState} products=${productDetailsList.size}")
+
+        if (!billingClient.isReady) {
+            println("⚠️ LAUNCH: Not ready — saving pending and reconnecting")
+            pendingProductId = productId
+            startConnection()
+            return false
+        }
+
+        if (productDetailsList.isEmpty()) {
+            println("⚠️ LAUNCH: Products empty — reloading")
+            pendingProductId = productId
+            queryProducts()
+            mainHandler.postDelayed({
+                pendingProductId?.let {
+                    pendingProductId = null
+                    launchPurchase(it)
+                }
+            }, 1000)
+            return false
+        }
+
+        pendingProductId = null
 
         val product = productDetailsList.find { it.productId == productId } ?: run {
-            println("❌ LAUNCH FAIL: Product not found: $productId")
-            return false  // ✅ product nahi mila
+            println("❌ LAUNCH: Product not found: $productId")
+            return false
         }
 
         val activity = AppContext.getActivity() ?: run {
-            println("❌ LAUNCH FAIL: Activity is NULL!")
-            return false  // ✅ activity nahi mili
+            println("❌ LAUNCH: Activity NULL")
+            return false
         }
-        println("🔴 LAUNCH 4: activity found = $activity")
+
+        if (activity.isFinishing || activity.isDestroyed) {
+            println("❌ LAUNCH: Activity finishing/destroyed")
+            return false
+        }
 
         val params = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(
                 listOf(BillingFlowParams.ProductDetailsParams.newBuilder()
                     .setProductDetails(product).build())
             ).build()
-        billingClient.launchBillingFlow(activity, params)
-        println("🔴 LAUNCH 5: launchBillingFlow called!")
 
-        return true  // ✅ successfully launched
+        val result = billingClient.launchBillingFlow(activity, params)
+        println("🔴 LAUNCH RESULT: code=${result.responseCode} msg=${result.debugMessage}")
+        return result.responseCode == BillingClient.BillingResponseCode.OK
     }
 
     private fun handlePurchase(purchase: Purchase) {
@@ -106,13 +166,19 @@ actual class BillingHelper actual constructor(
                 billingClient.consumeAsync(
                     ConsumeParams.newBuilder()
                         .setPurchaseToken(purchase.purchaseToken).build()
-                ) { _, _ -> }
+                ) { consumeResult, _ ->
+                    println("🟢 CONSUME: code=${consumeResult.responseCode}")
+                }
             }
         }
     }
 
     actual fun disconnect() {
-        if (billingClient.isReady) billingClient.endConnection()
+        println("⚠️ BILLING: disconnect called")
+        pendingProductId = null
+        if (billingClient.isReady) {
+            billingClient.endConnection()
+        }
     }
 
     private fun creditsFor(productId: String) = when (productId) {

@@ -30,7 +30,8 @@ val viewModelModule = module {
             registerGuestUseCase = get(),
             repository = get(),
             settings = get(),
-            googleSignInHelper = get()
+            googleSignInHelper = get(),
+//            loginWithGoogleUseCase = get()
         )
     }
 

@@ -188,6 +188,15 @@ class RoomsViewModel(
         getRooms()
         loadInteriorsData()
         viewModelScope.launch {
+            authViewModel.uiEvent.collect { event ->
+                println("🔵 arsBILLING: event received = $event")
+                if (event is CommonUiEvent.NavigateToSuccess) {
+                    println("🔵 arsBILLING: Login detected — reconnecting")
+                    reconnectBilling()
+                }
+            }
+        }
+        viewModelScope.launch {
             dbGeneratedImages.collect { images ->
                 _isDbLoaded.value = true
                 if (images.isEmpty()) {
@@ -201,6 +210,20 @@ class RoomsViewModel(
         }
     }
 
+    fun reconnectBilling() {
+        try {
+            println("🔵 arsBILLING: reconnectBilling ENTER")
+            billingHelper?.disconnect()
+            println("🔵 arsBILLING: disconnect done")
+            billingHelper = null
+            println("🔵 arsBILLING: null done")
+            initBilling()
+            println("🔵 arsBILLING: initBilling done")
+        } catch (e: Exception) {
+            println("🔵 arsBILLING: CRASH = ${e.message}")
+            e.printStackTrace()
+        }
+    }
     fun resetGenerationState() {
         _state.update {
             it.copy(
@@ -342,9 +365,12 @@ class RoomsViewModel(
                     palette.colors.map { it.toRawHex() } == event.colors
                 }?.id ?: 0
                 _state.update { it.copy(
-                    selectedRoomType = event.style,
-                    selectedStyleName = event.type,
-                    selectedPaletteId = matchedPaletteId
+                    selectedRoomType = event.type,
+                    selectedStyleName = event.style,
+                    selectedPaletteId = matchedPaletteId,
+                    isFromExplore = true, // Yeh lazmi hai
+                    selectedImageBytes = null, // Template flow mein image bytes null honi chahiye
+                    selectedImage = null
                 ) }
             }
 
@@ -384,7 +410,13 @@ class RoomsViewModel(
             }
 
             is RoomEvent.OnPaletteSelected -> {
-                _state.value = _state.value.copy(selectedPaletteId = event.paletteId)
+                // List mein se wo palette nikalain jiski ID match karti ho
+                val paletteObject = _state.value.filterColors.find { it.id == event.paletteId }
+
+                _state.update { it.copy(
+                    selectedPaletteId = event.paletteId,
+                    selectedPalette = paletteObject // Poora object yahan save ho gaya
+                )}
             }
             is RoomEvent.OnShuffleRooms -> {
                 _state.update { it.copy(
@@ -428,6 +460,7 @@ class RoomsViewModel(
                     selectedImageBytes = null,
                     errorMessage = null,
                     generatedCount = 3,
+                    selectedImage = null,
                     generatedImagesEntity = it.generatedImagesEntity + RecentGeneratedEntity(
                         imageUrls = emptyList(),
                         localPaths = emptyList(),
@@ -517,7 +550,6 @@ class RoomsViewModel(
                                 if (response.isProcessing && response.fetchUrl != null) {
                                     startImageTrackingUseCase(newTaskId, (maxEta * 0.8).toLong(), results.filter { it is ResultState.Success }.mapNotNull { (it as ResultState.Success).data.fetchUrl })
                                     launch {
-                                        delay(index * 2000L)
                                         var retries = 0
                                         while (retries < 30) {
                                             val fetchResult = fetchGeneratedRoomUseCase(response.fetchUrl)
@@ -576,7 +608,8 @@ class RoomsViewModel(
                                                 }
                                             }
                                             retries++
-                                            kotlinx.coroutines.delay(5000L)
+                                            val delayMs = if (retries < 5) 2000L else 3000L
+                                            kotlinx.coroutines.delay(delayMs)
                                         }
                                     }
                                 }
@@ -625,11 +658,18 @@ class RoomsViewModel(
                         generatedCount = 0,
                         selectedStyleName = null,
                         selectedPaletteId = null,
+                        selectedPalette = null,
                         currentPage = 0
                         // ❌ generatedImagesEntity = emptyList() -- yeh hatao
                     )
                 }
                 // ❌ _tasksProgress.update { emptyMap() } -- yeh bhi hatao
+            }
+            is RoomEvent.OnResetState -> {
+                _state.update { it.copy(
+                    selectedImage = null,
+                    isFromExplore = false
+                )}
             }
             is RoomEvent.ShowSelectedBundle -> {
                 _state.update {
@@ -829,56 +869,15 @@ class RoomsViewModel(
         val colorPaletteString = cleanHexColors.joinToString(", ")
 
         return """
-Ultra-photorealistic architectural interior photography of a $style $roomType. This is a REDESIGN of an existing room — the camera captures the same space, same walls, same ceiling height, same floor, same window positions, same door positions. Nothing structural has moved or changed. Only surfaces, furniture, and decor have been replaced.
-
-ARCHITECTURAL PRESERVATION — ABSOLUTE
-Every wall, ceiling, floor, window, and door remains IDENTICAL to the input image. No new openings, no removed elements, no structural changes whatsoever. Room proportions, depth, and spatial layout are pixel-accurate to the original. The camera angle and perspective must match the original room photograph exactly. Ceiling height, room width, and depth are unchanged.
-
-COLOR PALETTE — HIGHEST PRIORITY — ABSOLUTE ENFORCEMENT
-Allowed colors only $colorPaletteString. This is the MOST IMPORTANT rule — color palette overrides ALL other requirements including furniture, realism, and completeness. ALL surfaces including walls, floor, and ceiling trim must use $colorPaletteString tones only. ALL furniture including upholstery, frames, and legs must be within $colorPaletteString — if furniture cannot be found in palette colors, leave that space empty rather than break the palette. ALL decor including cushions, rugs, curtains, and artwork must reflect $colorPaletteString. Tonal variations are allowed — use lighter and darker shades of $colorPaletteString for depth. Any color outside $colorPaletteString family is strictly forbidden, including accidental greys, reflected hues from lighting, and neutral drift. If palette includes black, use true deep black only such as matte black, jet black, or near-black charcoal — the scene must appear dark and rich, NOT grey, NOT desaturated, NOT washed out. If palette is a single color, build depth through tints and shades of that one color only. NO EXCEPTIONS — color compliance is non-negotiable.
-
-FURNITURE GUIDELINES — SECONDARY TO COLOR PALETTE
-Furniture should furnish the room appropriately, but ONLY if pieces exist within $colorPaletteString. Color compliance overrides furniture completeness. Recommended furniture by room type:
-
-If $roomType is Living Room: a full sofa or sectional, one or two armchairs, a coffee table, a side table, a TV console or media unit, and a floor lamp — ALL in $colorPaletteString only.
-
-If $roomType is Bedroom: a full bed with headboard, two nightstands, a dresser or wardrobe, a bench or ottoman at foot of bed, and bedside lamps — ALL in $colorPaletteString only.
-
-If $roomType is Dining Room: a dining table sized for the room, a full set of dining chairs, a sideboard or buffet table, and a pendant light above the table — ALL in $colorPaletteString only.
-
-If $roomType is Kitchen: counter stools or breakfast bar seating, open shelving styled with dishes and plants, and a kitchen island if space allows — ALL in $colorPaletteString only.
-
-If $roomType is Home Office: a large desk, an ergonomic chair, a bookshelf or shelving unit, a desk lamp, and storage units — ALL in $colorPaletteString only.
-
-If $roomType is Bathroom: a styled vanity with mirror, towel rack with folded towels, a small plant, and bath accessories on counter — ALL in $colorPaletteString only.
-
-Include only furniture that exists in palette colors. An incomplete but color-accurate room is BETTER than a fully furnished room with wrong colors. Wall decor and accessories are secondary and must only fill remaining visual space after furniture is placed.
-
-FURNITURE — REAL INTERIOR DESIGN STANDARDS
-Furniture must look like it belongs in a real, lived-in $style $roomType and MUST use $colorPaletteString exclusively. Scale is proportional to the room with no oversized or undersized pieces. Every piece sits firmly on the floor with zero floating objects. Legs of chairs, tables, and sofas must cast proper shadows and contact the floor. Arrangement follows real interior design logic: sofa faces focal point such as fireplace, TV, or window; coffee table is centered and reachable from seating; bed is centered on main wall with equal nightstands; dining chairs are evenly spaced and tucked into table. Materials must be premium and physically accurate — velvet shows micro-texture and sheen variation, wood shows grain and natural variation, marble shows veining and reflective depth, metal shows brushed or polished surface quality, glass shows transparency and edge refraction. All materials MUST stay within $colorPaletteString. No clutter, no random objects, no decorative excess.
-
-WALL DECOR — REQUIRED AFTER FURNITURE IS COMPLETE
-Walls must never be bare or empty. Once furniture is placed, every visible wall surface must include at least one or two tasteful, style-appropriate decorative elements chosen from the following based on $style: large framed artwork or canvas paintings, curated gallery walls with 3 to 5 frames in matching or complementary sizes, architectural wall panels or textured feature walls, floating shelves with books, small sculptures, and plants, decorative mirrors with style-appropriate frames, wall sconces or mounted lighting fixtures, subtle wallpaper or textured wall finish, or woven wall hangings and tapestries. All wall decor must strictly use $colorPaletteString tones. Frames, artwork backgrounds, shelf contents, and mirror frames must all harmonize with the palette. Wall decor must be proportional to wall size — not too small and not overwhelming.
-
-ROOM ACCESSORIES — LIVED-IN BUT CURATED
-The room must feel complete, warm, and lived-in with carefully selected accessories that add personality without creating clutter. Include a small selection of the following based on $style and $roomType: a ceramic or sculptural vase with dried or fresh flowers on a side table or console, 2 to 4 decorative throw pillows on sofa or bed in coordinating $colorPaletteString tones, a neatly folded throw blanket draped over sofa or armchair, a styled coffee table or nightstand with 2 to 3 objects such as a tray, candle, small book stack, or decorative object, a potted indoor plant or small tree in a style-appropriate planter, a decorative rug that grounds the seating or sleeping area and stays within $colorPaletteString, table lamp or floor lamp that adds warm layered lighting, and small framed photo or art piece on a shelf or side table. All accessories must strictly conform to $colorPaletteString. No excess, no randomness — every object must feel intentionally placed by a professional interior stylist.
-
-LIGHTING — CINEMATIC AND NATURAL
-Soft, diffused natural light enters ONLY through existing windows in the same positions as the input image. Light creates gentle gradients, soft shadows, and warm depth. No harsh highlights, no overexposed surfaces, no blown-out areas. Lighting enhances $colorPaletteString and must NOT shift, wash out, or contaminate the palette. Global illumination allows ambient bounce light to fill shadows naturally. Table lamps and floor lamps emit soft warm glows that layer with natural light to create depth and intimacy. No artificial studio lighting unless $style specifically requires it.
-
-PHOTOGRAPHY QUALITY
-Resolution is 8K ultra-sharp. Lens is 24-35mm wide angle with slight perspective correction. Depth of field keeps foreground slightly soft and mid-room in sharp focus. No lens distortion, no vignette, no post-processing artifacts. Composition follows rule of thirds with a clear focal point and balanced negative space. Style reference is Architectural Digest, Elle Decor, and Dezeen editorial photography.
-
-PRIORITY ORDER (STRICT):
-1. Color palette enforcement (HIGHEST PRIORITY — OVERRIDES EVERYTHING)
-2. Architectural preservation
-3. Furniture placement (only with palette colors)
-4. Styling and realism
-
-Color palette MUST override furniture requirements, realism, and material accuracy. If conflict occurs, color wins every time.
-
-ABSOLUTE FORBIDDEN LIST
-No structural changes to walls, ceiling, floor, windows, or doors. No bare or completely empty walls. No floating furniture or objects not touching surfaces. NO COLORS OUTSIDE $colorPaletteString — every single pixel must fall within the palette. Any deviation is considered incorrect. No furniture in colors outside the specified palette, even if it means fewer pieces or empty spaces. No "close enough" color matching — palette colors ONLY. No text, watermarks, logos, or typography anywhere. No cartoon, illustration, CGI-render, or painterly look. No duplicate objects or copy-paste repetition. No misaligned or incorrectly scaled furniture. No excessive clutter or more than 6 to 8 accessories total in the scene. No grey substitutes for black palette. No lighting-induced color contamination. No randomly placed objects that serve no design purpose. No wall decor added before furniture is complete.""".trimIndent()
+Ultra photorealistic architectural interior photograph. Redesign the provided input image while strictly preserving the original architectural structure and layout. Keep the walls, ceiling, floor, windows, doors, and camera perspective exactly the same. Do not add, remove, move, or resize any architectural elements.
+This scene must remain a $roomType. Only include furniture and objects that are functionally appropriate for a $roomType. Do not include any items that belong to other room types. For example, avoid adding sofas in kitchens, beds in living rooms, or office furniture in bathrooms. Ensure the room clearly looks like a $roomType.
+Apply the $style interior design style consistently across all elements including furniture, materials, finishes, and decor. The style should be cohesive and recognizable, without mixing unrelated styles.
+Use the primary color palette of $colorPaletteString. Apply these colors to major surfaces, furniture, and decor. Maintain a harmonious look and avoid introducing strong unrelated colors. Neutral tones like white, black, gray, or beige can be used in small amounts for balance.
+Include only essential furniture required for a $roomType, with realistic proportions and proper placement. All objects must be grounded naturally with realistic shadows. Avoid floating, overlapping, or incorrectly scaled items.
+Add a small number of decor elements, around 4 to 6 items, such as artwork, plants, lighting, or accessories. These should match the $style and should not clutter the space.
+Use natural lighting from existing windows with soft, realistic shadows and balanced exposure. Ensure materials such as wood, fabric, glass, and metal appear realistic with proper texture and light interaction.
+The final output must look like a real professional architectural photograph with high realism, natural depth, and accurate materials. Avoid any CGI look, stylization, or artificial appearance.
+Ensure there are no extra rooms, no structural changes, no unrealistic object placements, and no unrelated items. Always prioritize architectural preservation, correct room type, photorealism, style consistency, and color harmony.""".trimIndent()
     }
 
     // Helper to clean existing strings
@@ -901,6 +900,9 @@ No structural changes to walls, ceiling, floor, windows, or doors. No bare or co
         return listOf(r, g, b).joinToString("") {
             it.toString(16).padStart(2, '0').uppercase()
         }
+    }
+    fun resetPurchasingState() {
+        _state.update { it.copy(isPurchasing = false, purchaseError = null) }
     }
 
     private fun initBilling() {
@@ -952,7 +954,6 @@ No structural changes to walls, ceiling, floor, windows, or doors. No bare or co
 
 
 
-                // ✅ EMAIL ki jagah LOGIN flag check karo
                 val email = authViewModel.state.value.email
 
                 if (email.isNullOrBlank()) {
@@ -965,8 +966,14 @@ No structural changes to walls, ceiling, floor, windows, or doors. No bare or co
 
 
                 _state.update { it.copy(isPurchasing = true, purchaseError = null) }
-                billingHelper?.launchPurchase(event.productId)
+                val launched = billingHelper?.launchPurchase(event.productId)
                 println("🔴 STEP 8: launchPurchase called with ${event.productId}")
+                launched?.let {
+                    if (!it) {
+                        _state.update { it.copy(isPurchasing = false) }
+                    }
+                }
+
 
             }
             RoomEvent.ClearPurchaseState -> {

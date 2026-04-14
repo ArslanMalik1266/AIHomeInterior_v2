@@ -8,6 +8,7 @@ sealed class RoomEvent {
     data class OnSearchQueryChange(val query: String) : RoomEvent()
     data object OnApplyFilters : RoomEvent()
     object OnFilterClick : RoomEvent()
+    object OnResetState : RoomEvent()
     object OnDismissFilterSheet : RoomEvent()
     object OnResetLoading : RoomEvent()
     object OnClearFilters : RoomEvent()
@@ -16,6 +17,8 @@ sealed class RoomEvent {
     data class GoToPage(val page: Int) : RoomEvent()
     data class SetEditMode(val isEdit: Boolean) : RoomEvent()
     object OnShuffleRooms : RoomEvent()
+
+
 
     data class SetTemplateDetails(
         val style: String,

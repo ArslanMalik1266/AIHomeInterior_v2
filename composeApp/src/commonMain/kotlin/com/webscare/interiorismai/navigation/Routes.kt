@@ -99,6 +99,6 @@ sealed class Routes {
         val imageUrl: String,
         val style: String,
         val type: String,
-        val colors: List<String> // Added color palette
+        val colors: List<String>
     ) : Routes()
 }

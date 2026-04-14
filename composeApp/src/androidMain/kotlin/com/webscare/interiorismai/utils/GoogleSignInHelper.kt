@@ -41,6 +41,7 @@ actual class GoogleSignInHelper(private val context: Context) {
                     val email = googleCredential.id
                     Log.d("GoogleSignIn", "Success google email: $email")
                     GoogleSignInResult(email = email)
+
                 } catch (e: GoogleIdTokenParsingException) {
                     Log.e("GoogleSignIn", "Token parsing failed: ${e.message}")
                     GoogleSignInResult(error = "Token parsing failed: ${e.message}")

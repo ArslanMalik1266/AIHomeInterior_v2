@@ -374,6 +374,7 @@ fun BaseBottomBarScreen(
                     ExploreScreen(
                         viewModel = roomViewModel,
                         onRoomClick = { room ->
+                            println("colorsars = ${room}")
                             val hexColors = room.colors.map { color ->
                                 roomViewModel.run { color.toRawHex() }
                             }
@@ -391,7 +392,6 @@ fun BaseBottomBarScreen(
                 composable<Routes.AbtToGenerateWithData> { backStackEntry ->
                     val args = backStackEntry.toRoute<Routes.AbtToGenerateWithData>()
                     var showGallery by remember { mutableStateOf(false) }
-                    var localIsFromExplore by remember { mutableStateOf(true) }
                     var localImageUrl by remember { mutableStateOf(args.imageUrl) }
                     val state by roomViewModel.state.collectAsState()
 
@@ -413,10 +413,10 @@ fun BaseBottomBarScreen(
                         authViewModel = authViewModel,
                         isEditable = false,
                         imageUrl = localImageUrl,
-                        isFromExplore = localIsFromExplore,
+                        isFromExplore = state.isFromExplore,
                         onCloseClick = { navController.popBackStack() },
                         onResult = {
-                            if (localIsFromExplore) {
+                            if (state.isFromExplore) {
                                 showGallery = true // Sirf tab gallery khule jab "Upload my Room" wala button ho
                             }
                         },
@@ -443,9 +443,9 @@ fun BaseBottomBarScreen(
                                 showGallery = false
 
                                 // Yahan ab 'localIsFromExplore' unresolved nahi hoga
-                                if (localIsFromExplore) {
+                                if (state.isFromExplore) {
                                     localImageUrl = photo.uri.toString()
-                                    localIsFromExplore = false
+                                    state.isFromExplore = false
                                 } else {
                                     navController.navigate(Routes.AddScreen)
                                 }
@@ -593,9 +593,11 @@ fun BaseBottomBarScreen(
                 composable<Routes.AbtToGenerate> {
                     AboutToGenerateScreen(
                         imageUrl = null,
+                        isFromExplore = false,
                         roomsViewModel = roomViewModel,
                         authViewModel = authViewModel,
                         onCloseClick = {
+                            roomViewModel.onRoomEvent(RoomEvent.OnResetState)
                             navController.popBackStack()
                         },
                         onResult = {

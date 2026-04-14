@@ -30,3 +30,31 @@ fun Modifier.addPressEffect(onClick: () -> Unit = {}): Modifier = composed {
             )
         }
 }
+fun Modifier.addPressEffectWithLongClick(
+    onClick: () -> Unit = {},
+    onLongClick: () -> Unit = {}
+): Modifier = composed {
+    var isPressed by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.9f else 1f,
+        animationSpec = tween(if (isPressed) 80 else 120),
+        label = "scale"
+    )
+
+    this
+        .graphicsLayer(scaleX = scale, scaleY = scale)
+        .pointerInput(Unit) {
+            detectTapGestures(
+                onPress = {
+                    isPressed = true
+                    tryAwaitRelease()
+                    isPressed = false
+                },
+                onTap = { onClick() },
+                onLongPress = {
+                    onLongClick()
+                }
+            )
+        }
+}
