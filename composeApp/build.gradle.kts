@@ -10,7 +10,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.androidx.room)
-//    alias(libs.plugins.google.services)
+    alias(libs.plugins.google.services)
 
 
 }

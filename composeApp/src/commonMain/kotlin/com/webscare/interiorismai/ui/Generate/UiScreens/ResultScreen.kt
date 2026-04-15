@@ -65,6 +65,7 @@ fun ResultScreen(
             tasksProgress.containsKey(currentTaskId) &&
             tasksStatus[currentTaskId] == GenerationStatus.RUNNING
 
+
     println("DEBUG_PATHS: paths = $paths")
     println("DEBUG_URLS: urls = $urls")
     println("DEBUG_BUNDLE: selectedBundleId = $selectedBundleId")

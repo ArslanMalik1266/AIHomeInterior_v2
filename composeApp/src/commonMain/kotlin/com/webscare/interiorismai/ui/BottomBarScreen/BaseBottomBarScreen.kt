@@ -378,6 +378,7 @@ fun BaseBottomBarScreen(
                             val hexColors = room.colors.map { color ->
                                 roomViewModel.run { color.toRawHex() }
                             }
+                            roomViewModel.resetStateForNewGeneration(isExplore = true)
                             navController.navigate(
                                 Routes.AbtToGenerateWithData(
                                     imageUrl = room.imageUrl,
@@ -415,11 +416,15 @@ fun BaseBottomBarScreen(
                         imageUrl = localImageUrl,
                         isFromExplore = state.isFromExplore,
                         onCloseClick = { navController.popBackStack() },
-                        onResult = {
-                            if (state.isFromExplore) {
-                                showGallery = true // Sirf tab gallery khule jab "Upload my Room" wala button ho
+                        onResult = { shouldOpenGallery ->
+                            if (shouldOpenGallery) {
+                                showGallery = true
+                            } else {
+                                navController.navigate(Routes.Result) {
+                                    popUpTo(Routes.AbtToGenerate) { inclusive = true }
+                                }
                             }
-                        },
+                                   },
                         onSubscriptionClick = { navController.navigate(Routes.Subscription) },
                         onEditType = {
 
@@ -439,16 +444,15 @@ fun BaseBottomBarScreen(
                                 val fileName = "room_upload.jpg"
 
                                 roomViewModel.onRoomEvent(RoomEvent.SetImageBytes(bytes, fileName))
+                                roomViewModel.onRoomEvent(
+                                    RoomEvent.SetTemplateDetails(
+                                        style = args.style,
+                                        type = args.type,
+                                        colors = args.colors
+                                    )
+                                )
 
                                 showGallery = false
-
-                                // Yahan ab 'localIsFromExplore' unresolved nahi hoga
-                                if (state.isFromExplore) {
-                                    localImageUrl = photo.uri.toString()
-                                    state.isFromExplore = false
-                                } else {
-                                    navController.navigate(Routes.AddScreen)
-                                }
                             },
                             onError = { showGallery = false },
                             onDismiss = { showGallery = false },

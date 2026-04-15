@@ -41,9 +41,10 @@ fun AboutToGenerateScreen(
     authViewModel: AuthViewModel,
     onCloseClick: () -> Unit,
     imageUrl: String?,
-    onResult: () -> Unit,
+    onResult: (shouldOpenGallery: Boolean) -> Unit,
     isFromExplore: Boolean = false,
     isEditable: Boolean = true,
+
     onSubscriptionClick: () -> Unit,
     onEditType: () -> Unit = {},
     onEditStyle: () -> Unit = {},
@@ -56,14 +57,19 @@ fun AboutToGenerateScreen(
     var isClosing by remember { mutableStateOf(false) }
     val paletteToDisplay = if (state.isFromExplore) {
         state.availableColors.find { it.id == state.selectedPaletteId }
-            ?: state.selectedPalette
-            ?: state.filterColors.firstOrNull()
     } else {
         state.selectedPalette ?: state.filterColors.firstOrNull()
+    }
+
+    val buttonText = when {
+        state.isFromExplore && state.selectedImageBytes == null -> "Upload my Room"
+        state.isFromExplore && state.selectedImageBytes != null -> "Generate Design"
+        else -> "Generate Design"
     }
     val selectedType = state.selectedRoomType ?: ""
     val selectedStyle = state.selectedStyleName ?: ""
     val selectedImage = state.selectedImage
+    val isImageSelected = state.selectedImageBytes != null
     println("DEBUG_ABOUT: selectedPaletteId = ${state.selectedPaletteId}")
     println("DEBUG_ABOUT: availableColors ids = ${state.availableColors.map { it.id }}")
 
@@ -76,7 +82,7 @@ fun AboutToGenerateScreen(
     }
     LaunchedEffect(state.isGenerating, state.isFetchingImages) {
         if (!isClosing && !state.isGenerating && state.isFetchingImages) {
-            onResult()
+            onResult(false)
         }
     }
 
@@ -147,40 +153,29 @@ fun AboutToGenerateScreen(
 
             GenerateButton(
                 modifier = Modifier.wrapContentSize().align(Alignment.CenterHorizontally),
-                isFromExplore = isFromExplore
+                isFromExplore = isFromExplore,
+                text = buttonText
             ) {
-                println("DEBUG_GENERATE: Button Clicked!")
-                println("DEBUG_GENERATE: totalCredits = ${authState.totalCredits}")
-                println("DEBUG_GENERATE: freeCredits = ${authState.freeCredits}")
-                println("DEBUG_GENERATE: selectedImageBytes = ${state.selectedImageBytes?.size}")
-                println("DEBUG_GENERATE: isGenerating = ${state.isGenerating}")
+                println("DEBUG_GENERATE: Button Clicked! Current Text: $buttonText")
 
-                if (isFromExplore) {
-                    println("DEBUG_GENERATE: Explore flow detected, triggering onResult to open gallery")
-                    onResult()
-                } else
-                {
+                // Senior Approach: Button ke text se decision lein
+                if (buttonText == "Upload my Room") {
+                    println("DEBUG_GENERATE: Triggering Gallery Picker...")
+                    onResult(true) // Explore mode mein pehle gallery khulegi
+                } else {
+                    // Yahan Generation ka logic chalayein
                     val effectiveCredits = if (authState.email.isNullOrBlank()) {
-                        // Guest — authViewModel se guestSession lo
                         authViewModel.guestSession.value?.totalCredits ?: 0
                     } else {
                         authState.totalCredits
                     }
 
-                    println("DEBUG_GENERATE: effectiveCredits = $effectiveCredits")
-
                     if (effectiveCredits > 0) {
-                        println("DEBUG_GENERATE: Credits available, starting generation...")
-
                         coroutineScope.launch {
                             val bytes = state.selectedImageBytes
                             val fileName = state.selectedFileName ?: "room_image.jpg"
-                            println("DEBUG_GENERATE: bytes = ${bytes?.size}, fileName = $fileName")
-
 
                             if (bytes != null) {
-                                println("DEBUG_GENERATE: Calling OnGenerateClick...")
-
                                 roomsViewModel.onRoomEvent(
                                     RoomEvent.OnGenerateClick(
                                         imageBytes = bytes,
@@ -188,11 +183,10 @@ fun AboutToGenerateScreen(
                                     )
                                 )
                             } else {
-                                println("DEBUG_GENERATE: bytes is NULL!")
+                                println("DEBUG_GENERATE: Error - No image bytes found for generation")
                             }
                         }
                     } else {
-                        println("DEBUG_GENERATE: No credits! Showing snackbar...")
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar(
                                 message = "You've run out of credits to generate designs.",
@@ -445,7 +439,10 @@ private fun ColorPaletteCard(
 }
 
 @Composable
-private fun GenerateButton(modifier: Modifier = Modifier,isFromExplore: Boolean, onGenerateClick: () -> Unit) {
+private fun GenerateButton(modifier: Modifier = Modifier,
+                           isFromExplore: Boolean,
+                           text: String, // Naya parameter add karein
+                           onGenerateClick: () -> Unit) {
     val buttonGradient = Brush.linearGradient(
         colorStops = arrayOf(
             0.0288f to Color(0xFF34D399).copy(alpha = 0.7f),
@@ -463,7 +460,6 @@ private fun GenerateButton(modifier: Modifier = Modifier,isFromExplore: Boolean,
         start = Offset(Float.POSITIVE_INFINITY, 0f), // 267.55deg ≈ right→left
         end = Offset(0f, 0f)
     )
-
 
     Button(
         onClick = onGenerateClick,
@@ -506,11 +502,11 @@ private fun GenerateButton(modifier: Modifier = Modifier,isFromExplore: Boolean,
                 ) {
                     Icon(
                         painter = painterResource(
-                            if (isFromExplore) Res.drawable.add_icon else Res.drawable.generate
+                            if (text == "Upload my Room") Res.drawable.add_icon else Res.drawable.generate
                         ),
                         contentDescription = "Generate Icon",
 
-                        tint = if (isFromExplore){
+                        tint = if (text == "Upload my Room"){
                             Color(0xFFFFFFFF)
 
                         }else
@@ -518,14 +514,14 @@ private fun GenerateButton(modifier: Modifier = Modifier,isFromExplore: Boolean,
                             Color(0xFFFFD13A)
 
                         },
-                        modifier = Modifier.size(if (isFromExplore) 16.dp else 24.dp)
+                        modifier = Modifier.size(if (text == "Upload my Room") 16.dp else 24.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Text(
-                    text = if (isFromExplore) "Upload my Room" else "Generate Design",
+                    text = text,
                     fontSize = 19.67.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White

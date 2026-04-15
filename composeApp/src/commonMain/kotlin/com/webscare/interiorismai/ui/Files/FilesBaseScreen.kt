@@ -143,6 +143,12 @@ fun FilesScreen(
                         onBundleClick = { selectedBundle ->
                             viewModel.onRoomEvent(RoomEvent.ShowSelectedBundle(listOf(selectedBundle)))
                             selectedBundle.bundleId?.let { onShowResults(it) }
+                        },
+                        onDeleteBundles = { selectedIds ->
+                            // This is where you call the ViewModel to delete from RoomDB
+                            selectedIds.forEach { id ->
+                                viewModel.deleteBundleById(id)
+                            }
                         }
                     )
                 }

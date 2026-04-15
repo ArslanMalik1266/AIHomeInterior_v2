@@ -19,5 +19,6 @@ val domainModule = module {
     factory { GenerateRoomUseCase(get()) }
     factory { FetchGeneratedRoomUseCase(get()) }
     factory { StartImageTrackingUseCase(get()) }
+//    factory { LoginWithGoogleUseCase(get()) }
 
 }

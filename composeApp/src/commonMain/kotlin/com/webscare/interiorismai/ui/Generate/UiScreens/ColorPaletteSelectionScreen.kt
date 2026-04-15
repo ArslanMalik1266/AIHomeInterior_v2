@@ -33,6 +33,7 @@ package com.webscare.interiorismai.ui.Generate.UiScreens
     fun ColorPaletteSelectionScreen(
         palettes: List<ColorPalette>,
         selectedPaletteId: Int?,
+        selectedPalette: ColorPalette?,
         onPaletteSelected: (Int) -> Unit,
     ) {
         LaunchedEffect(palettes, selectedPaletteId) {
@@ -82,8 +83,7 @@ package com.webscare.interiorismai.ui.Generate.UiScreens
                             ColorPaletteRow(
 
                                 palette = palettes[index],
-                                isSelected = palettes[index].id == selectedPaletteId,
-                                onClick = {
+                                isSelected = palettes[index].id == selectedPaletteId || palettes[index] == selectedPalette,                                onClick = {
                                     println("DEBUG_PALETTE: Clicked palette id=${palettes[index].id}, name=${palettes[index].name}")
                                     println("DEBUG_PALETTE: Current selectedPaletteId=$selectedPaletteId")
                                     onPaletteSelected(palettes[index].id) }

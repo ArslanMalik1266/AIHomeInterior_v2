@@ -130,6 +130,7 @@ class AuthViewModel(private val verifyOtpUseCase: VerifyOtpUseCase,
 
             if (result.isSuccess) {
                 // Aapka sharedViewModel.loginWithGoogle(email) wala logic yahan
+
                 _uiEvent.emit(CommonUiEvent.NavigateToHome)
             } else {
                 _uiEvent.emit(CommonUiEvent.ShowError(result.error ?: "Sign in failed"))  // ✅

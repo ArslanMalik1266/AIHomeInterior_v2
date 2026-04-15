@@ -48,6 +48,7 @@ import com.webscare.interiorismai.utils.getDeviceId
 import com.webscare.interiorismai.utils.readLocalFile
 import com.webscare.interiorismai.utils.saveImageBytes
 import com.webscare.interiorismai.utils.toBase64
+import kotlinx.coroutines.IO
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Clock
@@ -78,6 +79,7 @@ class RoomsViewModel(
     private var billingHelper: com.webscare.interiorismai.billing.BillingHelper? = null
 
     val tasksProgress = _tasksProgress.asStateFlow()
+
     // Har TaskID ka apna status track karne ke liye
     private val _tasksStatus = MutableStateFlow<Map<String, GenerationStatus>>(emptyMap())
     val tasksStatus = _tasksStatus.asStateFlow()
@@ -91,6 +93,7 @@ class RoomsViewModel(
 
     private val _isDbLoaded = MutableStateFlow(false)
     val isDbLoaded = _isDbLoaded.asStateFlow()
+
     @OptIn(ExperimentalTime::class)
     private fun generateTaskId() = Clock.System.now().toEpochMilliseconds().toString()
     private val _taskQueue = MutableStateFlow<List<String>>(emptyList())
@@ -129,6 +132,7 @@ class RoomsViewModel(
             )
         }
     }
+
     val dbGeneratedImages: StateFlow<List<RecentGeneratedEntity>> =
         recentGeneratedRepository.getRecentGenerated()
             .stateIn(
@@ -136,6 +140,7 @@ class RoomsViewModel(
                 started = SharingStarted.WhileSubscribed(5000),
                 initialValue = emptyList()
             )
+
     @OptIn(ExperimentalTime::class)
     fun saveOrUpdateDraft() {
         val currentState = _state.value
@@ -224,6 +229,7 @@ class RoomsViewModel(
             e.printStackTrace()
         }
     }
+
     fun resetGenerationState() {
         _state.update {
             it.copy(
@@ -233,10 +239,32 @@ class RoomsViewModel(
                 currentPage = 0, // <--- YE LINE ADD KAREIN
                 errorMessage = null,
                 isGenerating = false,
-                generatedImages = emptyList()
+                generatedImages = emptyList(),
             )
         }
         currentDraftId = null
+    }
+    fun deleteBundleById(id: Long) {
+        viewModelScope.launch {
+            try {
+                // Ye aapke repository ke delete method ko call karega
+                // Jo piche se RecentGeneratedDao.deleteGeneratedById(id) ko trigger karta hai
+                recentGeneratedRepository.deleteGeneratedById(id)
+            } catch (e: Exception) {
+                // Error handling agar zarurat ho
+                _uiEvent.emit(CommonUiEvent.ShowError("Failed to delete design"))
+            }
+        }
+    }
+
+    fun deleteDraftById(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                draftsRepository.deleteDraftById(id)
+            } catch (e: Exception) {
+                _uiEvent.emit(CommonUiEvent.ShowError("Failed to delete draft"))
+            }
+        }
     }
 
     @OptIn(ExperimentalTime::class, ExperimentalEncodingApi::class)
@@ -259,11 +287,14 @@ class RoomsViewModel(
                             selectedFileName = savedPath ?: event.fileName,
                             selectedImage = "image_picked",
                             currentTaskId = null,
-                            isFetchingImages = false
+                            isFetchingImages = false,
+
                         )
                     }
                 }
             }
+
+
             is RoomEvent.ToggleResultSheet -> {
                 _state.update { it.copy(isResultSheetExpanded = event.expand) }
             }
@@ -275,6 +306,7 @@ class RoomsViewModel(
             is RoomEvent.SetEditMode -> {
                 _state.update { it.copy(isEditMode = event.isEdit) }
             }
+
             is RoomEvent.OnApplyFilters -> {
                 val tempFilter = _state.value.tempFilterState
                 val count = calculateFilterCount(tempFilter)
@@ -335,6 +367,7 @@ class RoomsViewModel(
                     )
                 }
             }
+
             is RoomEvent.SetImage -> {
                 _state.value = _state.value.copy(
                     selectedImage = event.imageDetails.uri
@@ -360,18 +393,21 @@ class RoomsViewModel(
                     _state.value = _state.value.copy(currentPage = currentPage - 1)
                 }
             }
+
             is RoomEvent.SetTemplateDetails -> {
                 val matchedPaletteId = _state.value.availableColors.firstOrNull { palette ->
                     palette.colors.map { it.toRawHex() } == event.colors
                 }?.id ?: 0
-                _state.update { it.copy(
-                    selectedRoomType = event.type,
-                    selectedStyleName = event.style,
-                    selectedPaletteId = matchedPaletteId,
-                    isFromExplore = true, // Yeh lazmi hai
-                    selectedImageBytes = null, // Template flow mein image bytes null honi chahiye
-                    selectedImage = null
-                ) }
+                _state.update {
+                    it.copy(
+                        selectedRoomType = event.type,
+                        selectedStyleName = event.style,
+                        selectedPaletteId = matchedPaletteId,
+                        isFromExplore = true, // Yeh lazmi hai
+                        selectedImageBytes = null, // Template flow mein image bytes null honi chahiye
+                        selectedImage = null
+                    )
+                }
             }
 
             // Room type / style / palette selection events
@@ -391,12 +427,13 @@ class RoomsViewModel(
                 println("DEBUG_VM: Searching for ID: ${event.styleId}")
                 println("DEBUG_VM: Available Styles Count: ${_state.value.availableInteriorStyles.size}")
 
-                val style = _state.value.availableInteriorStyles.firstOrNull { it.id == event.styleId }
+                val style =
+                    _state.value.availableInteriorStyles.firstOrNull { it.id == event.styleId }
                 println("DEBUG_VM: Found Style Name: ${style?.name} for ID: ${event.styleId}") // 👈 ADD THIS
                 _state.update {
                     it.copy(
                         selectedStyleId = event.styleId,
-                        selectedStyleName =event.styleName
+                        selectedStyleName = event.styleName
                     )
                 }
             }
@@ -410,18 +447,25 @@ class RoomsViewModel(
             }
 
             is RoomEvent.OnPaletteSelected -> {
+
                 // List mein se wo palette nikalain jiski ID match karti ho
                 val paletteObject = _state.value.filterColors.find { it.id == event.paletteId }
 
-                _state.update { it.copy(
-                    selectedPaletteId = event.paletteId,
-                    selectedPalette = paletteObject // Poora object yahan save ho gaya
-                )}
+                _state.update {
+                    it.copy(
+                        selectedPaletteId = event.paletteId,
+                        selectedPalette = paletteObject,// Poora object yahan save ho gaya
+                        isFromExplore = false
+                    )
+                }
             }
+
             is RoomEvent.OnShuffleRooms -> {
-                _state.update { it.copy(
-                    filteredRooms = it.filteredRooms.shuffled()
-                )}
+                _state.update {
+                    it.copy(
+                        filteredRooms = it.filteredRooms.shuffled()
+                    )
+                }
             }
 
             is RoomEvent.OnGenerateClick -> {
@@ -453,20 +497,22 @@ class RoomsViewModel(
                 }
 
                 // Task count barhayein taake UI mein loader dikhayi de
-                _state.update { it.copy(
-                    activeTasksCount = it.activeTasksCount + 1,
-                    isFetchingImages = true,
-                    isGenerating = true,
-                    selectedImageBytes = null,
-                    errorMessage = null,
-                    generatedCount = 3,
-                    selectedImage = null,
-                    generatedImagesEntity = it.generatedImagesEntity + RecentGeneratedEntity(
-                        imageUrls = emptyList(),
-                        localPaths = emptyList(),
-                        bundleId = newTaskId
+                _state.update {
+                    it.copy(
+                        activeTasksCount = it.activeTasksCount + 1,
+                        isFetchingImages = true,
+                        isGenerating = true,
+                        selectedImageBytes = null,
+                        errorMessage = null,
+                        generatedCount = 3,
+                        selectedImage = null,
+                        generatedImagesEntity = it.generatedImagesEntity + RecentGeneratedEntity(
+                            imageUrls = emptyList(),
+                            localPaths = emptyList(),
+                            bundleId = newTaskId
+                        )
                     )
-                )}
+                }
 
 
                 generationJobs[newTaskId] = viewModelScope.launch {
@@ -474,10 +520,19 @@ class RoomsViewModel(
                         // Credits spend logic... (Existing code)
                         val email = authViewModel.state.value.email ?: ""
                         val deviceId = getDeviceId()
-                        val creditResult = if (email.isBlank()) spendCreditsUseCaseGuest(deviceId, 1) else spendCreditsUseCase(email, deviceId, 1)
+                        val creditResult = if (email.isBlank()) spendCreditsUseCaseGuest(
+                            deviceId,
+                            1
+                        ) else spendCreditsUseCase(email, deviceId, 1)
 
                         if (creditResult.isFailure) {
-                            _state.update { it.copy(activeTasksCount = (it.activeTasksCount - 1).coerceAtLeast(0)) }
+                            _state.update {
+                                it.copy(
+                                    activeTasksCount = (it.activeTasksCount - 1).coerceAtLeast(
+                                        0
+                                    )
+                                )
+                            }
                             return@launch
                         }
 
@@ -485,25 +540,39 @@ class RoomsViewModel(
                         val base64Image = withContext(Dispatchers.Default) {
                             "data:image/jpeg;base64,${capturedImageBytes.toBase64()}"
                         }
-                        val request = GenerateRoomRequest(initImage = base64Image, prompt = capturedPrompt)
+                        val request =
+                            GenerateRoomRequest(initImage = base64Image, prompt = capturedPrompt)
 
                         // 3 Parallel Calls
                         // Instead of awaitAll (which cancels all if one fails):
                         val results = listOf(
                             async {
-                                try { generateRoomUseCase(request) }
-                                catch (e: CancellationException) { throw e } // rethrow coroutine cancellation
-                                catch (e: Exception) { ResultState.Error(e.message ?: "Failed") }
+                                try {
+                                    generateRoomUseCase(request)
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } // rethrow coroutine cancellation
+                                catch (e: Exception) {
+                                    ResultState.Error(e.message ?: "Failed")
+                                }
                             },
                             async {
-                                try { generateRoomUseCase(request) }
-                                catch (e: CancellationException) { throw e }
-                                catch (e: Exception) { ResultState.Error(e.message ?: "Failed") }
+                                try {
+                                    generateRoomUseCase(request)
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    ResultState.Error(e.message ?: "Failed")
+                                }
                             },
                             async {
-                                try { generateRoomUseCase(request) }
-                                catch (e: CancellationException) { throw e }
-                                catch (e: Exception) { ResultState.Error(e.message ?: "Failed") }
+                                try {
+                                    generateRoomUseCase(request)
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    ResultState.Error(e.message ?: "Failed")
+                                }
                             }
                         ).awaitAll()
                         results.forEachIndexed { index, result ->
@@ -513,17 +582,19 @@ class RoomsViewModel(
                                 println("DEBUG_ETA: Task $index isProcessing = ${result.data.isProcessing}")
                             }
                         }
-                        _state.update { it.copy(
-                            isGenerating = false,
-                            isFetchingImages = true,
-                            generatedImagesEntity = listOf(
-                                RecentGeneratedEntity(
-                                    imageUrls = emptyList(),
-                                    localPaths = emptyList(),
-                                    bundleId = newTaskId
+                        _state.update {
+                            it.copy(
+                                isGenerating = false,
+                                isFetchingImages = true,
+                                generatedImagesEntity = listOf(
+                                    RecentGeneratedEntity(
+                                        imageUrls = emptyList(),
+                                        localPaths = emptyList(),
+                                        bundleId = newTaskId
+                                    )
                                 )
                             )
-                        )}
+                        }
 
                         val maxEta = results.filter { it is ResultState.Success }
                             .map { (it as ResultState.Success).data.eta ?: 30 }
@@ -532,10 +603,14 @@ class RoomsViewModel(
                         launch {
                             for (seconds in 1..200) {
                                 kotlinx.coroutines.delay(1000L)
-                                val progress = (seconds.toFloat() / maxEta.toFloat()).coerceAtMost(0.99f)
+                                val progress =
+                                    (seconds.toFloat() / maxEta.toFloat()).coerceAtMost(0.99f)
                                 _tasksProgress.update { it + (newTaskId to progress) }
                                 val currentStatus = _tasksStatus.value[newTaskId]
-                                if (currentStatus == GenerationStatus.SUCCESS || !_tasksStatus.value.containsKey(newTaskId)) break
+                                if (currentStatus == GenerationStatus.SUCCESS || !_tasksStatus.value.containsKey(
+                                        newTaskId
+                                    )
+                                ) break
                             }
                         }
 
@@ -548,16 +623,24 @@ class RoomsViewModel(
                             if (result is ResultState.Success) {
                                 val response = result.data
                                 if (response.isProcessing && response.fetchUrl != null) {
-                                    startImageTrackingUseCase(newTaskId, (maxEta * 0.8).toLong(), results.filter { it is ResultState.Success }.mapNotNull { (it as ResultState.Success).data.fetchUrl })
+                                    startImageTrackingUseCase(
+                                        newTaskId,
+                                        (maxEta * 0.8).toLong(),
+                                        results.filter { it is ResultState.Success }
+                                            .mapNotNull { (it as ResultState.Success).data.fetchUrl })
                                     launch {
                                         var retries = 0
                                         while (retries < 30) {
-                                            val fetchResult = fetchGeneratedRoomUseCase(response.fetchUrl)
+                                            val fetchResult =
+                                                fetchGeneratedRoomUseCase(response.fetchUrl)
                                             if (fetchResult is ResultState.Success) {
                                                 val data = fetchResult.data
                                                 if (!data.isProcessing && data.availableImages.isNotEmpty()) {
                                                     val imageUrl = data.availableImages.first()
-                                                    val localPath = downloadAndCacheImage(imageUrl, "room_${newTaskId}_$index.jpg")
+                                                    val localPath = downloadAndCacheImage(
+                                                        imageUrl,
+                                                        "room_${newTaskId}_$index.jpg"
+                                                    )
 
                                                     listLock.withLock {
                                                         allGeneratedUrls.add(imageUrl)
@@ -578,7 +661,7 @@ class RoomsViewModel(
                                                     }
                                                     if (successCount >= 3) {
                                                         // Bundle Complete! Save to DB
-                                                        val     bundleToSave = RecentGeneratedEntity(
+                                                        val bundleToSave = RecentGeneratedEntity(
                                                             imageUrls = allGeneratedUrls.toList(),
                                                             localPaths = allLocalPaths.toList(),
                                                             bundleId = newTaskId,
@@ -591,15 +674,23 @@ class RoomsViewModel(
                                                         println("DEBUG_BUNDLE_SAVE: originalImagePath = ${bundleToSave.originalImagePath}")
                                                         println("DEBUG_BUNDLE_SAVE: prompt = ${bundleToSave.prompt}")
                                                         println("DEBUG_BUNDLE_SAVE: roomType = ${bundleToSave.roomType}")
-                                                        recentGeneratedRepository.saveGenerated(bundleToSave)
-                                                        if (NotificationManager.isAppInBackground()) { NotificationManager.notifyIfBackground() }
+                                                        recentGeneratedRepository.saveGenerated(
+                                                            bundleToSave
+                                                        )
+                                                        if (NotificationManager.isAppInBackground()) {
+                                                            NotificationManager.notifyIfBackground()
+                                                        }
 
                                                         // Clean up this task
                                                         _tasksStatus.update { it + (newTaskId to GenerationStatus.SUCCESS) }
-                                                        _state.update { s -> s.copy(
-                                                            activeTasksCount = (s.activeTasksCount - 1).coerceAtLeast(0),
-                                                            isFetchingImages = s.activeTasksCount > 1,
-                                                        )}
+                                                        _state.update { s ->
+                                                            s.copy(
+                                                                activeTasksCount = (s.activeTasksCount - 1).coerceAtLeast(
+                                                                    0
+                                                                ),
+                                                                isFetchingImages = s.activeTasksCount > 1,
+                                                            )
+                                                        }
                                                         delay(5000L)
                                                         _tasksStatus.update { it - newTaskId }
                                                         _tasksProgress.update { it - newTaskId }
@@ -616,13 +707,20 @@ class RoomsViewModel(
                             }
                         }
                     } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    _state.update { it.copy(activeTasksCount = (it.activeTasksCount - 1).coerceAtLeast(0)) }
-                    _uiEvent.emit(ShowError("Generation failed: ${e.message}"))
-                }
+                        throw e
+                    } catch (e: Exception) {
+                        _state.update {
+                            it.copy(
+                                activeTasksCount = (it.activeTasksCount - 1).coerceAtLeast(
+                                    0
+                                )
+                            )
+                        }
+                        _uiEvent.emit(ShowError("Generation failed: ${e.message}"))
+                    }
                 }
             }
+
             is RoomEvent.OnCancelGeneration -> {
                 val taskId = event.taskId
 
@@ -643,21 +741,21 @@ class RoomsViewModel(
                 }
             }
 
+
             is RoomEvent.OnGenerationComplete -> {
-                // Sirf UI state reset karo (selection etc.)
-                // Generating bundles mat chhuao
                 _state.update {
                     it.copy(
                         selectedImageBytes = null,
                         selectedFileName = null,
+                        selectedPaletteId = null,
                         selectedImage = null,
+                        isFromExplore = false,
                         generatedImages = emptyList(),
                         isGenerating = false,
                         selectedRoomType = null,
                         isFetchingImages = it.activeTasksCount > 0, // agar aur tasks hain to true rakho
                         generatedCount = 0,
                         selectedStyleName = null,
-                        selectedPaletteId = null,
                         selectedPalette = null,
                         currentPage = 0
                         // ❌ generatedImagesEntity = emptyList() -- yeh hatao
@@ -665,16 +763,20 @@ class RoomsViewModel(
                 }
                 // ❌ _tasksProgress.update { emptyMap() } -- yeh bhi hatao
             }
+
             is RoomEvent.OnResetState -> {
-                _state.update { it.copy(
-                    selectedImage = null,
-                    isFromExplore = false
-                )}
+                _state.update {
+                    it.copy(
+                        selectedImage = null,
+                        isFromExplore = false
+                    )
+                }
             }
+
             is RoomEvent.ShowSelectedBundle -> {
                 _state.update {
                     it.copy(
-                        generatedImagesEntity   = event.bundle,
+                        generatedImagesEntity = event.bundle,
                         isGenerating = false,
                     )
                 }
@@ -687,6 +789,17 @@ class RoomsViewModel(
             else -> {}
         }
     }
+
+    fun resetStateForNewGeneration(isExplore: Boolean) {
+        _state.update { it.copy(
+            selectedPalette = null,
+            selectedPaletteId = null,
+            selectedImageBytes = null,
+            isFromExplore = isExplore,
+            isFetchingImages = false,
+        ) }
+    }
+
     private fun applyFiltersAndSearch() {
         val state = _state.value
         var filtered = state.allRooms
@@ -697,13 +810,19 @@ class RoomsViewModel(
             }
         }
 
-        if (state.filterState.selectedRoomTypes.isNotEmpty() && !state.filterState.selectedRoomTypes.contains("All")) {
+        if (state.filterState.selectedRoomTypes.isNotEmpty() && !state.filterState.selectedRoomTypes.contains(
+                "All"
+            )
+        ) {
             filtered = filtered.filter { room ->
                 state.filterState.selectedRoomTypes.contains(room.roomType)
             }
         }
 
-        if (state.filterState.selectedStyles.isNotEmpty() && !state.filterState.selectedStyles.contains("All")) {
+        if (state.filterState.selectedStyles.isNotEmpty() && !state.filterState.selectedStyles.contains(
+                "All"
+            )
+        ) {
             filtered = filtered.filter { room ->
                 state.filterState.selectedStyles.any { style ->
                     room.roomStyle.contains(style, ignoreCase = true)
@@ -724,6 +843,7 @@ class RoomsViewModel(
 
         _state.value = _state.value.copy(filteredRooms = filtered)
     }
+
     private fun calculateFilterCount(filterState: FilterState): Int {
         var count = 0
         if (filterState.selectedRoomTypes.isNotEmpty() && !filterState.selectedRoomTypes.contains("All")) count++
@@ -733,6 +853,7 @@ class RoomsViewModel(
         if (filterState.selectedPrices.isNotEmpty()) count++
         return count
     }
+
     private fun extractDynamicFilters(rooms: List<com.webscare.interiorismai.domain.model.RoomUi>) {
         val roomTypes = rooms.map { it.roomType }
             .filter { it.isNotBlank() }
@@ -747,10 +868,10 @@ class RoomsViewModel(
         }.distinctBy { it.name }
 
         val colorPalettesForFilter = rooms.map { room ->
-        ColorPalette(
+            ColorPalette(
                 colors = room.colors,
                 id = room.id,
-            name = room.paletteName,
+                name = room.paletteName,
             )
         }.distinctBy { it.colors }
 
@@ -762,12 +883,14 @@ class RoomsViewModel(
             )
         }
     }
+
     fun getRooms() {
         println("DEBUG_VM: 1. getRooms() called")
         viewModelScope.launch {
             executeApiCall(
                 updateState = { result ->
-                    _state.update { it.copy(getRoomsResponse = result) }                },
+                    _state.update { it.copy(getRoomsResponse = result) }
+                },
                 apiCall = {
                     println("DEBUG_VM: 2. Launching API Call...")
                     roomsRepository.getRoomsList()
@@ -838,6 +961,7 @@ class RoomsViewModel(
             }
         }
     }
+
     fun parseHexToColor(hex: String): Color {
         val cleanHex = hex.removePrefix("#")
         return when (cleanHex.length) {
@@ -901,6 +1025,7 @@ Ensure there are no extra rooms, no structural changes, no unrealistic object pl
             it.toString(16).padStart(2, '0').uppercase()
         }
     }
+
     fun resetPurchasingState() {
         _state.update { it.copy(isPurchasing = false, purchaseError = null) }
     }
@@ -953,7 +1078,6 @@ Ensure there are no extra rooms, no structural changes, no unrealistic object pl
                 println("🔴 STEP 6: billingProducts = ${_state.value.billingProducts.size}")
 
 
-
                 val email = authViewModel.state.value.email
 
                 if (email.isNullOrBlank()) {
@@ -976,9 +1100,11 @@ Ensure there are no extra rooms, no structural changes, no unrealistic object pl
 
 
             }
+
             RoomEvent.ClearPurchaseState -> {
                 _state.update { it.copy(purchaseSuccess = null, purchaseError = null) }
             }
+
             else -> onRoomEvent(event)
         }
     }
@@ -987,6 +1113,7 @@ Ensure there are no extra rooms, no structural changes, no unrealistic object pl
         super.onCleared()
         billingHelper?.disconnect()
     }    // RoomsViewModel.kt
+
     fun deleteRecentImage(id: Long, onDeleted: () -> Unit) {
         viewModelScope.launch {
             println("DEBUG_VM: Attempting to delete image with ID: $id")
@@ -1000,6 +1127,7 @@ Ensure there are no extra rooms, no structural changes, no unrealistic object pl
             }
         }
     }
+
     @OptIn(ExperimentalTime::class)
     fun redoGeneration(
         entity: RecentGeneratedEntity,
@@ -1012,7 +1140,11 @@ Ensure there are no extra rooms, no structural changes, no unrealistic object pl
                 ?: entity
             // 1. Original image bytes lo
             val imageBytes = latestEntity.originalImagePath?.let {
-                try { readLocalFile(it) } catch (e: Exception) { null }
+                try {
+                    readLocalFile(it)
+                } catch (e: Exception) {
+                    null
+                }
             }
 
             if (imageBytes == null || imageBytes.isEmpty()) {
@@ -1064,10 +1196,14 @@ Ensure there are no extra rooms, no structural changes, no unrealistic object pl
                         launch {
                             for (seconds in 1..200) {
                                 kotlinx.coroutines.delay(1000L)
-                                val progress = (seconds.toFloat() / eta.toFloat()).coerceAtMost(0.99f)
+                                val progress =
+                                    (seconds.toFloat() / eta.toFloat()).coerceAtMost(0.99f)
                                 _tasksProgress.update { it + (taskId to progress) }
                                 val status = _tasksStatus.value[taskId]
-                                if (status == GenerationStatus.SUCCESS || !_tasksStatus.value.containsKey(taskId)) break
+                                if (status == GenerationStatus.SUCCESS || !_tasksStatus.value.containsKey(
+                                        taskId
+                                    )
+                                ) break
                             }
                         }
 
@@ -1078,18 +1214,26 @@ Ensure there are no extra rooms, no structural changes, no unrealistic object pl
                                 val data = fetchResult.data
                                 if (!data.isProcessing && data.availableImages.isNotEmpty()) {
                                     val newUrl = data.availableImages.first()
-                                    val newPath = downloadAndCacheImage(newUrl, "redo_${taskId}_$indexToReplace.jpg")
+                                    val newPath = downloadAndCacheImage(
+                                        newUrl,
+                                        "redo_${taskId}_$indexToReplace.jpg"
+                                    )
                                     val currentEntity = _state.value.generatedImagesEntity
                                         .firstOrNull { it.bundleId == entity.bundleId }
                                         ?: entity
 
                                     // ✅ Sirf target index replace karo
-                                    val    updatedUrls = currentEntity.imageUrls.toMutableList().apply {
-                                        if (size > indexToReplace) set(indexToReplace, newUrl)
-                                    }
-                                    val updatedPaths = currentEntity.localPaths.toMutableList().apply {
-                                        if (size > indexToReplace) set(indexToReplace, newPath ?: "")
-                                    }
+                                    val updatedUrls =
+                                        currentEntity.imageUrls.toMutableList().apply {
+                                            if (size > indexToReplace) set(indexToReplace, newUrl)
+                                        }
+                                    val updatedPaths =
+                                        currentEntity.localPaths.toMutableList().apply {
+                                            if (size > indexToReplace) set(
+                                                indexToReplace,
+                                                newPath ?: ""
+                                            )
+                                        }
 
                                     val updatedBundle = currentEntity.copy(
                                         imageUrls = updatedUrls,
@@ -1133,6 +1277,7 @@ Ensure there are no extra rooms, no structural changes, no unrealistic object pl
             }
         }
     }
+
     fun startGlobalTimer() {
         timerJob?.cancel()
         _generationProgress.value = 0f
@@ -1154,11 +1299,16 @@ Ensure there are no extra rooms, no structural changes, no unrealistic object pl
             }
         }
     }
+
     fun prepareForNewGeneration() {
         _state.update { it.copy(isFetchingImages = false) }
     }
 
-    fun deleteImageFromBundle(entity: RecentGeneratedEntity, imageIndex: Int, onDeleted: () -> Unit) {
+    fun deleteImageFromBundle(
+        entity: RecentGeneratedEntity,
+        imageIndex: Int,
+        onDeleted: () -> Unit
+    ) {
         viewModelScope.launch {
             try {
                 val updatedUrls = entity.imageUrls.toMutableList().apply { removeAt(imageIndex) }

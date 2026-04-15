@@ -34,6 +34,7 @@ data class RoomUiState(
     val isLoading: Boolean = true,
     val currentTaskId: String? = null, // ✅ Har generation ki unique ID
     val activeTasksCount: Int = 0,
+    val activeTasks: List<ActiveTaskInfo> = emptyList(),
     val showFilterSheet: Boolean = false,
     val tempFilterState: FilterState = FilterState(),
     val expandedRoomType: Boolean = false,
@@ -104,6 +105,13 @@ data class RoomDraft(
     val styleName: String? = null,
     val paletteId: Int? = null,
     val currentPage: Int = 0
+)
+@Serializable
+data class ActiveTaskInfo(
+    val taskId: String,
+    val progress: Float = 0f,
+    val roomType: String? = null,
+    val style: String? = null
 )
 @Serializable
 data class User(

@@ -1,23 +1,22 @@
-# Keep your data models (used by Ktor/Serialization/Room)
-# Replace 'com.webscare.interiorismai' with your actual package name
+# [Add these for Google One Tap / Credential Manager]
+-keep class com.google.android.libraries.identity.googleid.** { *; }
+-keep class androidx.credentials.** { *; }
+-keep class com.google.android.gms.auth.api.signin.** { *; }
+
+# [Keep your data models]
 -keep class com.webscare.interiorismai.data.** { *; }
 -keep class com.webscare.interiorismai.domain.model.** { *; }
 
-# Keep rules for Koin (essential for DI)
+# [Koin Rules - already in your file]
 -keep class org.koin.** { *; }
+-dontwarn org.koin.core.annotation.KoinReflectAPI
+-dontwarn org.koin.core.instance.InstanceBuilderKt
 
-# Keep rules for Firebase (if used)
--keep class com.google.firebase.** { *; }
-
-# Keep rules for Coil (images)
--keep class coil3.** { *; }
-
-# Keep Kotlin Serialization
+# [Serialization - already in your file]
 -keepclassmembers class * implements kotlinx.serialization.Serializable {
     *;
 }
 
-# Please add these rules to your existing keep rules in order to suppress warnings.
-# This is generated automatically by the Android Gradle plugin.
--dontwarn org.koin.core.annotation.KoinReflectAPI
--dontwarn org.koin.core.instance.InstanceBuilderKt
+# [Firebase & Coil - already in your file]
+-keep class com.google.firebase.** { *; }
+-keep class coil3.** { *; }
