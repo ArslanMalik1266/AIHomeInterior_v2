@@ -351,7 +351,7 @@ private fun RoomCategoryCard(room: RoomUi, modifier: Modifier = Modifier, onClic
         // ✅ AsyncImage ki jagah SubcomposeAsyncImage use karein
         SubcomposeAsyncImage(
             model = ImageRequest.Builder(LocalPlatformContext.current)
-                .data(room.imageUrl)
+                .data(room.compressedImageUrl)
                 .crossfade(true)
                 .diskCachePolicy(CachePolicy.ENABLED)
                 .memoryCachePolicy(CachePolicy.ENABLED)

@@ -15,10 +15,13 @@ import com.webscare.interiorismai.utils.ImageStatusWorker
 actual fun platformModule(): Module = module{
     single<RoomDatabase.Builder<AppDatabase>> {
         getDatabaseBuilder(androidContext())
-    }
-    single<BackgroundTaskScheduler> { AndroidTaskScheduler(get()) }
 
-    // Worker register karein
+    }
+    single { get<AppDatabase>().roomDao() }
+    single { get<AppDatabase>().draftDao() }
+    single { get<AppDatabase>().recentGeneratedDao() }
+
+    single<BackgroundTaskScheduler> { AndroidTaskScheduler(get()) }
     worker { ImageStatusWorker(get(), get()) }
     single { GoogleSignInHelper(androidContext()) }
 

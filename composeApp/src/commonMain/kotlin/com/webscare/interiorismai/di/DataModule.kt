@@ -30,7 +30,7 @@ val dataModule = module {
         )
     }
     single<AuthRepository> { AuthRepositoryImpl(get())}
-    single<RoomsRepository> { RoomRepositoryImpl(get()) }
+    single<RoomsRepository> { RoomRepositoryImpl(get(), get ()) }
     single<CreditsRepository> { CreditsRepositoryImpl(get()) }
     single<InteriorsRepository> { InteriorsRepositoryImpl(get()) }
 }

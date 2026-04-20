@@ -1,25 +1,35 @@
 package com.webscare.interiorismai.ui.BottomBarScreen
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -53,6 +63,7 @@ import androidx.compose.ui.draw.innerShadow
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.text.font.FontWeight
@@ -89,6 +100,7 @@ import com.webscare.interiorismai.ui.authentication.AuthViewModel
 import com.webscare.interiorismai.ui.theme.bottomBarBack
 import com.webscare.interiorismai.ui.theme.selectedNavItem
 import com.webscare.interiorismai.ui.theme.unselectedNavItem
+import com.webscare.interiorismai.utils.CommonBackHandler
 import com.webscare.interiorismai.utils.GenerationStatus
 import com.webscare.interiorismai.utils.getPlatformContext
 import kotlinx.coroutines.launch
@@ -130,7 +142,13 @@ fun BaseBottomBarScreen(
         if (currentStatus == GenerationStatus.SUCCESS) 1f else (tasksProgress[currentTaskId] ?: 0f)
     var lastTaskId by remember { mutableStateOf<String?>(null) }
     val activeCount = tasksStatus.count { it.value == GenerationStatus.RUNNING }
+    var isExpanded by remember { mutableStateOf(false) }
 
+
+// YEH LINE ADD KAR EIN:
+    val isCurrentBundleFetching = currentTaskId.isNotEmpty() &&
+            tasksProgress.containsKey(currentTaskId) &&
+            tasksStatus[currentTaskId] == GenerationStatus.RUNNING
 
     val shouldShowBottomBar = currentDestination?.route?.let { route ->
         route.contains("Create") ||
@@ -341,6 +359,7 @@ fun BaseBottomBarScreen(
                             navController.navigate(Routes.AbtToGenerate)
                         },
                         onRoomClick = { room ->
+                            roomViewModel.clearBundleSelection()
                             val hexColors = room.colors.map { color ->
                                 roomViewModel.run { color.toRawHex() }
                             }
@@ -375,13 +394,16 @@ fun BaseBottomBarScreen(
                         viewModel = roomViewModel,
                         onRoomClick = { room ->
                             println("colorsars = ${room}")
+
+                            roomViewModel.clearBundleSelection()
+                            roomViewModel.resetStateForNewGeneration(isExplore = true)
+
                             val hexColors = room.colors.map { color ->
                                 roomViewModel.run { color.toRawHex() }
                             }
-                            roomViewModel.resetStateForNewGeneration(isExplore = true)
                             navController.navigate(
                                 Routes.AbtToGenerateWithData(
-                                    imageUrl = room.imageUrl,
+                                    imageUrl = room.compressedImageUrl,
                                     style = room.roomStyle,
                                     type = room.roomType,
                                     colors = hexColors
@@ -717,6 +739,7 @@ fun BaseBottomBarScreen(
                     )
                 }
             }
+
             AnimatedVisibility(
                 visible = isRunning,
                 enter = slideInVertically(initialOffsetY = { it }),
@@ -724,143 +747,188 @@ fun BaseBottomBarScreen(
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
             {
-                Row(
+                Column(
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .padding(bottom = padding.calculateBottomPadding())
-                        .shadow(
-                            elevation = 24.dp,
-                        )
-                        .background(
-                            color = Color(0xFFFFFFFF),
-                            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-                        )
-                        .padding(
-                            start = 16.dp,
-                            top = 16.dp,
-                            end = 16.dp,
-                            bottom = 24.dp
-                        ),
-                    verticalAlignment = Alignment.CenterVertically
+                        .shadow(elevation = 24.dp, shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                        .background(Color.White, shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                        .animateContentSize(animationSpec = tween(durationMillis = 600))
+                        .then(if (isExpanded) Modifier.fillMaxHeight(0.9f) else Modifier.wrapContentHeight())
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ){}
                 )
                 {
-                    BadgedBox(
-                        badge = {
-                            val activeCount =
-                                tasksStatus.count { it.value == GenerationStatus.RUNNING }
-                            if (activeCount > 0) {
-                                Badge(
-                                    containerColor = Color(0xFFCCE9A2),
-                                    modifier = Modifier.size(14.dp)
-                                ) {
-                                    Text(
-                                        text = activeCount.toString(),
-                                        fontSize = 8.sp,
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        },
 
-                        ) {
-                        Box(
-                            modifier = Modifier.size(36.dp).clip(CircleShape)
-                                .background(Color(0xFFF2F2F1)), contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                painter = painterResource(Res.drawable.bottom_box_image),
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            CircularProgressIndicator(
-                                progress = { displayProgress },
-                                modifier = Modifier.size(36.dp),
-                                strokeWidth = 2.dp,
-                                color = Color(0xFFCCE9A2),
-                                trackColor = Color(0xFFF2F2F1)
-                            )
-                            val activeCount =
-                                tasksStatus.count { it.value == GenerationStatus.RUNNING }
-                            if (activeCount > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(14.dp)
-                                        .align(Alignment.TopEnd)
-                                        .offset(x = 4.dp, y = (-4).dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFCCE9A2)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = activeCount.toString(),
-                                        fontSize = 8.sp,
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-
+                    if (isExpanded) {
+                        CommonBackHandler(enabled = isExpanded) {
+                            isExpanded = false
                         }
-                    }
+                        AnimatedVisibility(
+                            visible = isExpanded,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            // Ye raha aapka reusable result screen
+                            ResultScreen(
+                                viewModel = roomViewModel,
+                                generatedImages = roomViewModel.state.collectAsState().value.generatedImagesEntity,
+                                isFetchingImages = isCurrentBundleFetching,
+                                generatedCount = 3,
+                                onCloseClick = {
+                                    // Bas expand band kar dein
+                                    isExpanded = false
+                                },
+                                onBackClick = {
+                                    // Bas expand band kar dein
+                                    isExpanded = false
+                                },
+                                onImageClick = { index ->
+                                    // Yahan wahi logic jo aapne NavHost wale ResultScreen mein likhi thi
+                                    val currentBundle = roomViewModel.state.value.generatedImagesEntity.firstOrNull()
+                                    if (currentBundle != null) {
+                                        navController.navigate(Routes.FileEdit(imageIndex = index, entityId = currentBundle.id))
+                                    }
+                                }
+                            )
+                        }
 
-                    Spacer(modifier = Modifier.width(10.dp))
-                    val infiniteTransition = rememberInfiniteTransition()
-                    val blinkAlpha by infiniteTransition.animateFloat(
-                        initialValue = 1f,
-                        targetValue = 0.2f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(durationMillis = 800),
-                            repeatMode = RepeatMode.Reverse
-                        )
-                    )
-
-                    val textAlpha =
-                        if (currentStatus == GenerationStatus.RUNNING) blinkAlpha else 1f
-
-                    Text(
-                        text = loadingText,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFF2C2C2C),
-                        modifier = Modifier.graphicsLayer { alpha = textAlpha }
-                    )
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    if (currentStatus == GenerationStatus.SUCCESS) {
-                        Text(
-                            text = "Tap to view",
-                            fontSize = 12.sp,
-                            color = Color(0xFFD4F7BD),
-                            fontWeight = FontWeight.Bold,
+                    } else
+                    {
+                        Row(
                             modifier = Modifier
-                                .clickable {
-                                    roomViewModel.selectBundle(currentTaskId)
-                                    navController.navigate(Routes.Result)
-                                    showTapToView = null
-                                    roomViewModel.onRoomEvent(RoomEvent.OnGenerationComplete)
-                                }
-                                .padding(8.dp)
+                                .fillMaxWidth()
+                                .clickable { isExpanded = true }
+                                .padding(bottom = padding.calculateBottomPadding())
+                                .padding(
+                                    start = 16.dp,
+                                    top = 16.dp,
+                                    end = 16.dp,
+                                    bottom = 24.dp
+                                ),
+                            verticalAlignment = Alignment.CenterVertically
                         )
-                    } else {
-                        IconButton(
-                            onClick = {
-                                roomViewModel.onRoomEvent(RoomEvent.OnCancelGeneration(taskId = currentTaskId))
-                            },
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Cancel",
-                                tint = Color(0xFF8E8E8E),
-                                modifier = Modifier.size(18.dp)
+                        {
+                            BadgedBox(
+                                badge = {
+                                    val activeCount =
+                                        tasksStatus.count { it.value == GenerationStatus.RUNNING }
+                                    if (activeCount > 0) {
+                                        Badge(
+                                            containerColor = Color(0xFFCCE9A2),
+                                            modifier = Modifier.size(14.dp)
+                                        ) {
+                                            Text(
+                                                text = activeCount.toString(),
+                                                fontSize = 8.sp,
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                },
+
+                                ) {
+                                Box(
+                                    modifier = Modifier.size(36.dp).clip(CircleShape)
+                                        .background(Color(0xFFF2F2F1)), contentAlignment = Alignment.Center
+                                ) {
+                                    Image(
+                                        painter = painterResource(Res.drawable.bottom_box_image),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    CircularProgressIndicator(
+                                        progress = { displayProgress },
+                                        modifier = Modifier.size(36.dp),
+                                        strokeWidth = 2.dp,
+                                        color = Color(0xFFCCE9A2),
+                                        trackColor = Color(0xFFF2F2F1)
+                                    )
+                                    val activeCount =
+                                        tasksStatus.count { it.value == GenerationStatus.RUNNING }
+                                    if (activeCount > 0) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(14.dp)
+                                                .align(Alignment.TopEnd)
+                                                .offset(x = 4.dp, y = (-4).dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFFCCE9A2)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = activeCount.toString(),
+                                                fontSize = 8.sp,
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(10.dp))
+                            val infiniteTransition = rememberInfiniteTransition()
+                            val blinkAlpha by infiniteTransition.animateFloat(
+                                initialValue = 1f,
+                                targetValue = 0.2f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(durationMillis = 800),
+                                    repeatMode = RepeatMode.Reverse
+                                )
                             )
+
+                            val textAlpha =
+                                if (currentStatus == GenerationStatus.RUNNING) blinkAlpha else 1f
+
+                            Text(
+                                text = loadingText,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF2C2C2C),
+                                modifier = Modifier.graphicsLayer { alpha = textAlpha }
+                            )
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            if (currentStatus == GenerationStatus.SUCCESS) {
+                                Text(
+                                    text = "Tap to view",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFD4F7BD),
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier
+                                        .clickable {
+                                            roomViewModel.selectBundle(currentTaskId)
+                                            navController.navigate(Routes.Result)
+                                            showTapToView = null
+                                            roomViewModel.onRoomEvent(RoomEvent.OnGenerationComplete)
+                                        }
+                                        .padding(8.dp)
+                                )
+                            } else {
+                                IconButton(
+                                    onClick = {
+                                        roomViewModel.onRoomEvent(RoomEvent.OnCancelGeneration(taskId = currentTaskId))
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Cancel",
+                                        tint = Color(0xFF8E8E8E),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
                         }
                     }
-                }
-            }
+
+
+            } }
         }
 
 
@@ -886,6 +954,28 @@ fun BaseBottomBarScreen(
                 selectionLimit = 1
             )
         }
+    }
+}
+
+@Composable
+fun ScrimOverlay(
+    visible: Boolean,
+    onDismiss: () -> Unit
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.3f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onDismiss() }
+        )
     }
 }
 

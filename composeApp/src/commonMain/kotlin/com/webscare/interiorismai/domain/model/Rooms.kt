@@ -14,6 +14,7 @@ data class Rooms(
 data class RoomDetail(
     val id: Int,
     @SerialName("image_url") val imageUrl: String,
+    @SerialName("compressed_image_url") val compressedImageUrl: String,
     @SerialName("is_trending") val isTrending: Int = 0,
     @SerialName("interior_style_id") val interiorStyleId: Int? = null,
     @SerialName("interior_type_id") val interiorTypeId: Int? = null,

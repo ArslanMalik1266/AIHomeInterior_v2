@@ -42,6 +42,7 @@ import com.webscare.interiorismai.utils.getImageModel
 
 @Composable
 fun ResultScreen(
+    modifier: Modifier = Modifier,
     viewModel: RoomsViewModel,
     generatedImages: List<RecentGeneratedEntity>,
     onCloseClick: () -> Unit = {},
@@ -71,7 +72,7 @@ fun ResultScreen(
     println("DEBUG_BUNDLE: selectedBundleId = $selectedBundleId")
     println("DEBUG_BUNDLE: currentBundle bundleId = ${currentBundle?.bundleId}")
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
             .background(Color.White)

@@ -189,28 +189,66 @@ class RoomsViewModel(
     }
 
     init {
+        // 1. Billing Setup
         initBilling()
-        getRooms()
+
+        // 2. Data Loading (The "Offline-First" Engine)
+        observeRooms()      // UI hamesha DB se update hogi
+        syncRooms()         // Network se DB ko refresh karega
         loadInteriorsData()
+
+        // 3. Event Listeners (Cleaned up)
+        observeAuthEvents()
+        observeGeneratedImages()
+    }
+
+    private fun observeRooms() {
+        viewModelScope.launch {
+            roomsRepository.getRoomsFlow().collect { rooms ->
+
+                val trending = rooms.filter { it.isTrending == 1 }
+
+                _state.update { currentState ->
+                    currentState.copy(
+                        trendingRooms = trending,
+                        allRooms = rooms,
+                        filteredRooms = rooms,
+                        isLoading = false
+                    )
+                }
+
+                if (rooms.isNotEmpty()) {
+                    extractDynamicFilters(rooms)
+                }
+            }
+        }
+    }
+
+    // Background Network Sync
+    private fun syncRooms() {
+        viewModelScope.launch {
+            roomsRepository.refreshRooms() // Ye DB update karega, observeRooms() auto-trigger hoga
+        }
+    }
+
+    // Auth events handle karein
+    private fun observeAuthEvents() {
         viewModelScope.launch {
             authViewModel.uiEvent.collect { event ->
-                println("🔵 arsBILLING: event received = $event")
                 if (event is CommonUiEvent.NavigateToSuccess) {
-                    println("🔵 arsBILLING: Login detected — reconnecting")
                     reconnectBilling()
                 }
             }
         }
+    }
+
+    // DB Generated Images (Proper State Update)
+    private fun observeGeneratedImages() {
         viewModelScope.launch {
             dbGeneratedImages.collect { images ->
                 _isDbLoaded.value = true
-                if (images.isEmpty()) {
-                    println("🟢 FETCH_FLOW: ⚠️ Database is EMPTY")
-                } else {
-                    images.forEachIndexed { index, entity ->
-                        println("🟢 FETCH_FLOW: [$index] ID = ${entity.id}")
-                    }
-                }
+                // Sirf println mat karein, state update karein taake UI update ho
+                _state.update { it.copy(generatedImagesEntity = images) }
             }
         }
     }
@@ -244,6 +282,7 @@ class RoomsViewModel(
         }
         currentDraftId = null
     }
+
     fun deleteBundleById(id: Long) {
         viewModelScope.launch {
             try {
@@ -289,7 +328,7 @@ class RoomsViewModel(
                             currentTaskId = null,
                             isFetchingImages = false,
 
-                        )
+                            )
                     }
                 }
             }
@@ -791,13 +830,15 @@ class RoomsViewModel(
     }
 
     fun resetStateForNewGeneration(isExplore: Boolean) {
-        _state.update { it.copy(
-            selectedPalette = null,
-            selectedPaletteId = null,
-            selectedImageBytes = null,
-            isFromExplore = isExplore,
-            isFetchingImages = false,
-        ) }
+        _state.update {
+            it.copy(
+                selectedPalette = null,
+                selectedPaletteId = null,
+                selectedImageBytes = null,
+                isFromExplore = isExplore,
+                isFetchingImages = false,
+            )
+        }
     }
 
     private fun applyFiltersAndSearch() {
@@ -884,42 +925,51 @@ class RoomsViewModel(
         }
     }
 
-    fun getRooms() {
-        println("DEBUG_VM: 1. getRooms() called")
-        viewModelScope.launch {
-            executeApiCall(
-                updateState = { result ->
-                    _state.update { it.copy(getRoomsResponse = result) }
-                },
-                apiCall = {
-                    println("DEBUG_VM: 2. Launching API Call...")
-                    roomsRepository.getRoomsList()
-                },
-                onSuccess = { response ->
-                    println("DEBUG_VM: 3. Success! Rooms Count: ${response.rooms.size}")
-                    if (response.success) {
-                        val finalList = response.rooms.map { it.toUi() }
-                        val trending = finalList.filter { it.isTrending == 1 }
-                        _state.update { currentState ->
-                            currentState.copy(
-                                trendingRooms = trending,
-                                allRooms = finalList,
-                                filteredRooms = finalList,
-                                isLoading = false
-                            )
-                        }
-                        extractDynamicFilters(finalList)
-                    } else {
-                        println("DEBUG_VM: 4. API Success was False.")
-                        _state.update { it.copy(isLoading = false) }
-                        viewModelScope.launch { _uiEvent.emit(ShowError("Something went wrong")) }
-                    }
-                },
-                onError = { errorMessage ->
-                    println("DEBUG_VM: 5. API Error: $errorMessage")
-                    _state.update { it.copy(isLoading = false) }
-                    viewModelScope.launch { _uiEvent.emit(ShowError(errorMessage)) }
-                }
+    //    fun getRooms() {
+//        println("DEBUG_VM: 1. getRooms() called")
+//        viewModelScope.launch {
+//            executeApiCall(
+//                updateState = { result ->
+//                    _state.update { it.copy(getRoomsResponse = result) }
+//                },
+//                apiCall = {
+//                    println("DEBUG_VM: 2. Launching API Call...")
+//                    roomsRepository.getRoomsList()
+//                },
+//                onSuccess = { response ->
+//                    println("DEBUG_VM: 3. Success! Rooms Count: ${response.rooms.size}")
+//                    if (response.success) {
+//                        val finalList = response.rooms.map { it.toUi() }
+//                        val trending = finalList.filter { it.isTrending == 1 }
+//                        _state.update { currentState ->
+//                            currentState.copy(
+//                                trendingRooms = trending,
+//                                allRooms = finalList,
+//                                filteredRooms = finalList,
+//                                isLoading = false
+//                            )
+//                        }
+//                        extractDynamicFilters(finalList)
+//                    } else {
+//                        println("DEBUG_VM: 4. API Success was False.")
+//                        _state.update { it.copy(isLoading = false) }
+//                        viewModelScope.launch { _uiEvent.emit(ShowError("Something went wrong")) }
+//                    }
+//                },
+//                onError = { errorMessage ->
+//                    println("DEBUG_VM: 5. API Error: $errorMessage")
+//                    _state.update { it.copy(isLoading = false) }
+//                    viewModelScope.launch { _uiEvent.emit(ShowError(errorMessage)) }
+//                }
+//            )
+//        }
+//    }
+    fun clearBundleSelection() {
+        _selectedBundleId.value = null
+        _state.update {
+            it.copy(
+                isFetchingImages = false,
+                isResultSheetExpanded = false
             )
         }
     }

@@ -9,12 +9,15 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import kotlinx.coroutines.Dispatchers
 import com.webscare.interiorismai.data.local.dao.DraftDao // Import add karein
 import com.webscare.interiorismai.data.local.dao.RecentGeneratedDao
+import com.webscare.interiorismai.data.local.dao.RoomDao
 import com.webscare.interiorismai.data.local.entities.DraftEntity // Import add karein
 import com.webscare.interiorismai.data.local.entities.RecentGeneratedEntity
+import com.webscare.interiorismai.data.local.entities.RoomEntity
 
 @Database(
     entities = [DraftEntity::class,
-               RecentGeneratedEntity::class],
+               RecentGeneratedEntity::class,
+        RoomEntity::class],
     version = 1
 )
 @TypeConverters(StringListConverter::class)
@@ -22,6 +25,7 @@ import com.webscare.interiorismai.data.local.entities.RecentGeneratedEntity
 abstract class AppDatabase : RoomDatabase() {
     abstract fun draftDao(): DraftDao
     abstract fun recentGeneratedDao(): RecentGeneratedDao
+    abstract fun roomDao(): RoomDao
 }
 
 @Suppress("KotlinNoActualForExpect")

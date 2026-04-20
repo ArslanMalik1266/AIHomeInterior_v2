@@ -405,7 +405,7 @@ private fun RoomImageCard(
     ) {
         SubcomposeAsyncImage(
             model = ImageRequest.Builder(LocalPlatformContext.current)
-                .data(room.imageUrl)
+                .data(room.compressedImageUrl)
                 .crossfade(true)
                 .diskCachePolicy(CachePolicy.ENABLED)
                 .memoryCachePolicy(CachePolicy.ENABLED)

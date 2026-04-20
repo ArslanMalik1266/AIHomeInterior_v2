@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 data class RoomUi(
     val id: Int,
     val imageUrl: String,
+    val compressedImageUrl: String,
     val roomStyle: String,
     val roomType: String,
     val isTrending: Int,
