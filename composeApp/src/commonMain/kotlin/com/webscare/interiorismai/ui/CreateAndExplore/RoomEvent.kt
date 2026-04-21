@@ -23,7 +23,9 @@ sealed class RoomEvent {
     data class SetTemplateDetails(
         val style: String,
         val type: String,
-        val colors: List<String>
+        val colors: List<String>,
+        val compressedImageUrl: String? = null,
+        val fullImageUrl: String? = null
     ) : RoomEvent()
 
     data class SetImageBytes(val bytes: ByteArray, val fileName: String) : RoomEvent()

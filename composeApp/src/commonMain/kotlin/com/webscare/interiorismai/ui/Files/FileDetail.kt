@@ -95,7 +95,7 @@ fun CreateEditScreen(
         }
     }
 
-        val backgroundColor = Color(0xFFFFFFFF)
+    val backgroundColor = Color(0xFFFFFFFF)
     val darkText = Color(0xFF2C2C2C)
     val grayText = Color(0xFF9B9B9B)
     val buttonBackground = Color(0xFFF9F9F9)
@@ -371,6 +371,7 @@ fun ProBadge(gradientColors: List<Color>) {
 fun ImageSection(
     imageUrl: ByteArray = byteArrayOf(),
     imageUrlString: String = "",
+    compressedImageUrl: String = "",
     modifier: Modifier = Modifier,
     imageBorder: Color,
     isTrending: Boolean = false,
@@ -465,7 +466,8 @@ fun ImageSection(
             userScrollEnabled = scale == 1f
         ) { page ->
             val currentImage = entity?.localPaths?.getOrNull(page) ?: imageUrlString
-
+            var isFullLoaded by remember { mutableStateOf(false) }
+            val alpha by animateFloatAsState(targetValue = if (isFullLoaded) 1f else 0f, animationSpec = tween(500))
             AsyncImage(
                 model = if (isPressed && originalImagePath.isNotEmpty()) {
                     getImageModel(originalImagePath) ?: originalImagePath
@@ -484,25 +486,25 @@ fun ImageSection(
             )
         }
         if (!isTrending) {
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .align(Alignment.BottomEnd)
-                .offset(x = -16.dp, y = (-16).dp)
-                .clip(RoundedCornerShape(41.dp))
-                .background(Color(0xFFFCFCFC).copy(alpha = 0.9f))
-                .padding(7.dp)
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onPress = {
-                            isPressed = true
-                            tryAwaitRelease()
-                            isPressed = false
-                        }
-                    )
-                },
-            contentAlignment = Alignment.Center
-        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .align(Alignment.BottomEnd)
+                    .offset(x = -16.dp, y = (-16).dp)
+                    .clip(RoundedCornerShape(41.dp))
+                    .background(Color(0xFFFCFCFC).copy(alpha = 0.9f))
+                    .padding(7.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onPress = {
+                                isPressed = true
+                                tryAwaitRelease()
+                                isPressed = false
+                            }
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
 
                 Icon(
                     painter = painterResource(Res.drawable.compare),
@@ -573,4 +575,3 @@ fun ActionButton(
     }
 
 }
-

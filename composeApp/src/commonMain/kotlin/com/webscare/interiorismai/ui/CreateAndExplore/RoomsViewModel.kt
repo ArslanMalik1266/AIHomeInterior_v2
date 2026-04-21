@@ -434,16 +434,37 @@ class RoomsViewModel(
             }
 
             is RoomEvent.SetTemplateDetails -> {
-                val matchedPaletteId = _state.value.availableColors.firstOrNull { palette ->
-                    palette.colors.map { it.toRawHex() } == event.colors
-                }?.id ?: 0
-                _state.update {
-                    it.copy(
-                        selectedRoomType = event.type,
-                        selectedStyleName = event.style,
+                println("DEBUG_OBJECT_DUMP: $event")
+                println("DEBUG_CLASS_PATH: ViewModel class path = ${event::class.qualifiedName}")
+                // 🔹 Yahan check karein ke Event ke paas data aaya ya nahi
+                println("DEBUG_VIEWMODEL: Received Compressed=${event.compressedImageUrl}")
+                println("DEBUG_VIEWMODEL: Received Full=${event.fullImageUrl}")
+                // 1. Check karein ke API wali list load hui hai ya nahi
+                val isColorsListEmpty = _state.value.availableColors.isEmpty()
+
+                // 2. Palette ID decide karne ki logic
+                val matchedPaletteId = if (!isColorsListEmpty) {
+                    // Online mode: List se match dhundho
+                    _state.value.availableColors.firstOrNull { palette ->
+                        palette.colors.map { it.toRawHex() } == event.colors
+                    }?.id ?: 0
+                } else {
+                    // Offline mode: Purana selectedPaletteId sambhaal kar rakho, overwrite mat karo
+                    _state.value.selectedPaletteId
+                }
+
+                // 3. State update (Safety ke saath)
+                _state.update { currentState ->
+                    currentState.copy(
+                        // Sirf tab update karein agar event mein data hai, warna purana data rehne dein
+                        selectedRoomType = event.type.takeIf { it.isNotBlank() } ?: currentState.selectedRoomType,
+                        selectedStyleName = event.style.takeIf { it.isNotBlank() } ?: currentState.selectedStyleName,
                         selectedPaletteId = matchedPaletteId,
-                        isFromExplore = true, // Yeh lazmi hai
-                        selectedImageBytes = null, // Template flow mein image bytes null honi chahiye
+                        compressedImageUrl = event.compressedImageUrl,
+                        fullImageUrl = event.fullImageUrl,
+                        // Flags
+                        isFromExplore = true,
+                        selectedImageBytes = null,
                         selectedImage = null
                     )
                 }
@@ -904,7 +925,8 @@ class RoomsViewModel(
             com.webscare.interiorismai.domain.model.InteriorStyle(
                 name = room.roomStyle,
                 image = room.imageUrl,
-                id = room.id
+                id = room.id,
+                compressed_image_url = room.compressedImageUrl
             )
         }.distinctBy { it.name }
 

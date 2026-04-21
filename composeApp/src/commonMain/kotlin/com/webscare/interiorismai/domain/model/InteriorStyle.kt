@@ -8,6 +8,7 @@ data class InteriorStyle(
     val id: Int,
     val name: String,
     val image: String,
+    val compressed_image_url: String,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
 )

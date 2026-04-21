@@ -55,6 +55,7 @@ sealed class Routes {
     @SerialName("file-edit")
     data class FileEdit(
         val imageUrl: String = "" ,
+        val compressedImageUrl: String = "",
         val imageIndex: Int = -1,
         val entityId: Long = -1L
     ) : Routes()
@@ -97,6 +98,7 @@ sealed class Routes {
     @SerialName("generate_with_data")
     data class AbtToGenerateWithData(
         val imageUrl: String,
+        val fullImageUrl: String,
         val style: String,
         val type: String,
         val colors: List<String>

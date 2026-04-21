@@ -221,7 +221,7 @@ private fun StyleCard(
             }    ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalPlatformContext.current)
-                .data(style.image)
+                .data(style.compressed_image_url)
                 .crossfade(true)
                 .build(),
             placeholder = painterResource(Res.drawable.roomplaceholder),

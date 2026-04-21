@@ -15,7 +15,8 @@
 
         override fun getRoomsFlow(): Flow<List<RoomUi>> {
             return roomDao.getAllRooms().map { entities ->
-                // Yahan Entity se UI model mein map kar rahe hain
+                println("CACHE_DEBUG Reading from Cache: ${entities.size} items")
+
                 entities.map { it.toUi() }
             }
         }
@@ -30,7 +31,9 @@
 
                 // 2. Agar API successful hai, toh DB update karein
                 if (response.success) {
-                    val entities = response.rooms.map { it.toEntity() }
+                    val entities = response.rooms.map { it.toEntity()}
+                    println("CACHE_DEBUG Data saved to DB: ${entities.size} items")
+
                     roomDao.insertAll(entities)
                 }
             } catch (e: Exception) {

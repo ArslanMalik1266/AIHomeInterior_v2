@@ -587,6 +587,7 @@ fun AppInfoSection() {
                     )
                 AppInfoItem("Report a bug", showDivider = false, showArrow = true,
                     onClick = {
+                        print("deviceidars ${getDeviceInfo()}")
                         openEmail(
                             to = "support@urducanvas.com",
                             subject = "Bug Report",

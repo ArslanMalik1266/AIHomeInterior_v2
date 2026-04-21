@@ -1,5 +1,7 @@
 package com.webscare.interiorismai.ui.Generate.UiScreens
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
@@ -41,6 +44,8 @@ fun AboutToGenerateScreen(
     authViewModel: AuthViewModel,
     onCloseClick: () -> Unit,
     imageUrl: String?,
+    fullImageUrl: String? = null,
+    compressedImageUrl: String? = null,
     onResult: (shouldOpenGallery: Boolean) -> Unit,
     isFromExplore: Boolean = false,
     isEditable: Boolean = true,
@@ -105,7 +110,8 @@ fun AboutToGenerateScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
                 imageBytes = state.selectedImageBytes,
-                imageUrl = imageUrl
+                imageUrl = imageUrl,
+                compressedImageUrl = compressedImageUrl
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -303,18 +309,55 @@ fun TopBar(roomsViewModel: RoomsViewModel,onCloseClick: () -> Unit) {
 }
 
 @Composable
-private fun ImagePreview(modifier: Modifier = Modifier, imageBytes: ByteArray?, imageUrl: String?) {
+private fun ImagePreview(
+    modifier: Modifier = Modifier,
+    imageBytes: ByteArray?,
+    imageUrl: String?,
+    compressedImageUrl: String?
+) {
     Box(
         modifier = modifier
             .fillMaxHeight(0.45f)
             .clip(RoundedCornerShape(9.dp))
-            .background(Color(0xFFF5F5F5))
+            .background(Color(0xFFF5F5F5)) // Agar image load hone mein time le, to ye gray dikhega
     ) {
         if (imageBytes != null) {
-            // User ki apni select ki hui photo
             AsyncImage(model = imageBytes, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         } else if (!imageUrl.isNullOrEmpty()) {
-            AsyncImage(model = imageUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+
+            // 1. Compressed Image (Background) - Always Visible
+            AsyncImage(
+                model = compressedImageUrl ?: imageUrl,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                onSuccess = {
+                    println("DEBUG_IMAGE: ✅ compressed Image : $compressedImageUrl")
+                }
+            )
+
+            // 2. Full Image (Foreground) - Fade In
+            // Hum yahan key(imageUrl) use kar rahe hain taake image change hone par reset ho jaye
+            key(imageUrl) {
+                var isFullLoaded by remember { mutableStateOf(false) }
+                val alpha by animateFloatAsState(
+                    targetValue = if (isFullLoaded) 1f else 0f,
+                    animationSpec = tween(500)
+                )
+
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(alpha),
+                    contentScale = ContentScale.Crop,
+                    onSuccess = {
+                        isFullLoaded = true
+                        println("DEBUG_IMAGE: ✅ Full Image Faded In: $imageUrl")
+                    }
+                )
+            }
         } else {
             Text(text = "No Image Selected", modifier = Modifier.align(Alignment.Center))
         }

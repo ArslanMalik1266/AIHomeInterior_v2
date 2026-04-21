@@ -365,10 +365,11 @@ fun BaseBottomBarScreen(
                             }
                             navController.navigate(
                                 Routes.AbtToGenerateWithData(
-                                    imageUrl = room.imageUrl,
+                                    imageUrl = room.compressedImageUrl,
                                     style = room.roomStyle,
                                     type = room.roomType,
-                                    colors = hexColors
+                                    colors = hexColors,
+                                    fullImageUrl = room.imageUrl,
                                 )
                             )
                         },
@@ -404,6 +405,7 @@ fun BaseBottomBarScreen(
                             navController.navigate(
                                 Routes.AbtToGenerateWithData(
                                     imageUrl = room.compressedImageUrl,
+                                    fullImageUrl = room.imageUrl,
                                     style = room.roomStyle,
                                     type = room.roomType,
                                     colors = hexColors
@@ -415,17 +417,21 @@ fun BaseBottomBarScreen(
                 composable<Routes.AbtToGenerateWithData> { backStackEntry ->
                     val args = backStackEntry.toRoute<Routes.AbtToGenerateWithData>()
                     var showGallery by remember { mutableStateOf(false) }
-                    var localImageUrl by remember { mutableStateOf(args.imageUrl) }
+                    var localImageUrl by remember { mutableStateOf(args.fullImageUrl) }
                     val state by roomViewModel.state.collectAsState()
+                    println("DEBUG_NAVIGATION_CHECK: imageUrl (Compressed) = ${args.imageUrl}")
+                    println("DEBUG_NAVIGATION_CHECK: fullImageUrl = ${args.fullImageUrl}")
 
-                    // Update the ViewModel state so the screen shows the correct details
                     LaunchedEffect(Unit) {
-                        // ViewModel mein ye "Khobiaan" save kar dein
+                        println("DEBUG_DEBUG: Sending to ViewModel -> ${args.imageUrl}")
+                        println("DEBUG_CLASS_PATH: Composable class path = ${RoomEvent.SetTemplateDetails::class.qualifiedName}")
                         roomViewModel.onRoomEvent(
                             RoomEvent.SetTemplateDetails(
                                 style = args.style,
                                 type = args.type,
-                                colors = args.colors
+                                colors = args.colors,
+                                compressedImageUrl = args.imageUrl, // Yahan data gaya
+                                fullImageUrl = args.fullImageUrl
                             )
                         )
                     }
@@ -435,7 +441,9 @@ fun BaseBottomBarScreen(
                         roomsViewModel = roomViewModel,
                         authViewModel = authViewModel,
                         isEditable = false,
-                        imageUrl = localImageUrl,
+                        compressedImageUrl = state.compressedImageUrl,
+                        fullImageUrl = state.fullImageUrl,
+                        imageUrl = state.fullImageUrl ?: localImageUrl,
                         isFromExplore = state.isFromExplore,
                         onCloseClick = { navController.popBackStack() },
                         onResult = { shouldOpenGallery ->
@@ -470,7 +478,9 @@ fun BaseBottomBarScreen(
                                     RoomEvent.SetTemplateDetails(
                                         style = args.style,
                                         type = args.type,
-                                        colors = args.colors
+                                        colors = args.colors,
+                                        compressedImageUrl = state.compressedImageUrl ?: "",
+                                        fullImageUrl = state.fullImageUrl ?: ""
                                     )
                                 )
 
@@ -542,29 +552,32 @@ fun BaseBottomBarScreen(
                 }
 
                 composable<Routes.FileEdit> { backStackEntry ->
+
                     val args = backStackEntry.toRoute<Routes.FileEdit>()
+
                     val dbImages by roomViewModel.dbGeneratedImages.collectAsState()
                     val state by roomViewModel.state.collectAsState()
                     val selectedBundleId by roomViewModel.selectedBundleId.collectAsState()
 
-
-                    val entity = remember(args, dbImages, state, selectedBundleId) {
+                    // 🔥 FIX: stable entity resolution (NO heavy recomposition)
+                    val entity = remember(args.entityId, selectedBundleId) {
                         when {
-                            // Agar generate screen se aa rahe hain (Result Screen bundle)
                             args.imageIndex >= 0 && state.generatedImagesEntity.isNotEmpty() -> {
                                 state.generatedImagesEntity.firstOrNull { it.bundleId == selectedBundleId }
                                     ?: state.generatedImagesEntity.firstOrNull()
                             }
 
                             args.entityId != -1L -> dbImages.find { it.id == args.entityId }
+
                             else -> null
                         }
                     }
 
-                    // 2. Index handle karein (default 0)
                     val selectedIndex = if (args.imageIndex >= 0) args.imageIndex else 0
 
                     when {
+
+                        // 🔹 Trending / direct URL flow
                         args.imageUrl.isNotEmpty() -> {
                             CreateEditScreen(
                                 entity = null,
@@ -575,27 +588,23 @@ fun BaseBottomBarScreen(
                             )
                         }
 
+                        // 🔹 Entity-based flow
                         entity != null -> {
-                            val imagePath = entity.localPaths.getOrNull(selectedIndex) ?: ""
+
+                            val imagePath =
+                                entity.localPaths.getOrNull(selectedIndex)
 
                             CreateEditScreen(
                                 entity = entity,
                                 viewModel = roomViewModel,
-                                selectedIndex = selectedIndex, // ✅ Ye pass karna zaroori hai Redo ke liye
-                                imageUrlString = imagePath,    // ✅ Sahi index wali image
+                                selectedIndex = selectedIndex,
+                                imageUrlString = imagePath ?: "",
+
                                 onClick = {
-                                    val previousRoute =
-                                        navController.previousBackStackEntry?.destination?.route
-                                    if (previousRoute?.contains("Result") == true) {
-                                        navController.navigate(Routes.Create) {
-                                            popUpTo(Routes.Create) { inclusive = true }
-                                        }
-                                    } else {
-                                        navController.popBackStack()
-                                    }
+                                    navController.popBackStack()
                                 },
+
                                 onRedo = {
-                                    // Redo ke baad Result screen pe wapas jana
                                     navController.navigate(Routes.Result) {
                                         popUpTo(navController.graph.startDestinationId)
                                         launchSingleTop = true
@@ -603,8 +612,6 @@ fun BaseBottomBarScreen(
                                 }
                             )
                         }
-                        // Trending images ke liye logic
-
 
                         else -> {
                             Box(
@@ -617,6 +624,7 @@ fun BaseBottomBarScreen(
                     }
                 }
                 composable<Routes.AbtToGenerate> {
+
                     AboutToGenerateScreen(
                         imageUrl = null,
                         isFromExplore = false,
