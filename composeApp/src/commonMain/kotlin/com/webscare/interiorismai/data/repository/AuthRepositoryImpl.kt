@@ -56,19 +56,19 @@ class AuthRepositoryImpl(
         }
     }
 
-//    override suspend fun loginWithGoogle(
-//        packageName: String,
-//        deviceId: String,
-//        userEmail: String,
-//        authProvider: String
-//    ): Result<VerifyResponse> {
-//        return runCatching {
-//            authService.loginWithGoogle(userEmail, deviceId, authProvider).body<VerifyResponse>()
-//        }.onFailure { e ->
-//            println("DEBUG: Repository Error: ${e.message}")
-//            e.printStackTrace()
-//        }
-//    }
+    override suspend fun loginWithGoogle(
+        packageName: String,
+        deviceId: String,
+        userEmail: String,
+        authProvider: String
+    ): Result<VerifyResponse> {
+        return runCatching {
+            authService.loginWithGoogle(userEmail, deviceId, authProvider).body<VerifyResponse>()
+        }.onFailure { e ->
+            println("DEBUG: Repository Error: ${e.message}")
+            e.printStackTrace()
+        }
+    }
 
     override suspend fun logout(
         packageName: String,

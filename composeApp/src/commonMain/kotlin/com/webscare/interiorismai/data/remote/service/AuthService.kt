@@ -33,21 +33,21 @@ class AuthService(
         header("X-API-KEY", apiKey)
     }
 
-//    suspend fun loginWithGoogle(
-//        email: String,
-//        deviceId: String,
-//        authProvider: String,
-//    ): HttpResponse = client.submitForm(
-//        url = "$baseUrl/device/link",
-//        formParameters = Parameters.build {
-//            append("package_name", "com.webscare.interiorismai")
-//            append("device_id", deviceId)
-//            append("user_email", email)
-//            append("auth_provider", authProvider)
-//        }
-//    ) {
-//        header("X-API-KEY", apiKey)
-//    }
+    suspend fun loginWithGoogle(
+        email: String,
+        deviceId: String,
+        authProvider: String,
+    ): HttpResponse = client.submitForm(
+        url = "$baseUrl/device/link",
+        formParameters = Parameters.build {
+            append("package_name", "com.webscare.interiorismai")
+            append("device_id", deviceId)
+            append("user_email", email)
+            append("auth_provider", authProvider)
+        }
+    ) {
+        header("X-API-KEY", apiKey)
+    }
 
     // Verify OTP (Link karne ke liye)
     suspend fun verifyOtp(

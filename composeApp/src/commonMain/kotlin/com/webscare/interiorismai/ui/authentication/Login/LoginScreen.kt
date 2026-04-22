@@ -71,6 +71,12 @@ fun LoginScreen(
                 is CommonUiEvent.ShowError -> {
                     snackBarState.showError(event.message)
                 }
+                is CommonUiEvent.NavigateToHome -> {
+                    // Navigate to BaseAppScreen and clear the Login stack
+                    navController.navigate(Routes.BaseAppScreen) {
+                        popUpTo(Routes.Login) { inclusive = true }
+                    }
+                }
 
                 CommonUiEvent.NavigateToSuccess -> {
                     navController.navigate(Routes.Verification) {

@@ -22,6 +22,7 @@ import com.webscare.interiorismai.domain.model.GuestSession
 import com.webscare.interiorismai.domain.model.UserDetail
 import com.webscare.interiorismai.domain.repo.AuthRepository
 import com.webscare.interiorismai.domain.usecase.LoginUseCase
+import com.webscare.interiorismai.domain.usecase.LoginWithGoogleUseCase
 import com.webscare.interiorismai.domain.usecase.LogoutUseCase
 import com.webscare.interiorismai.domain.usecase.RegisterGuestUseCase
 import com.webscare.interiorismai.domain.usecase.ResendOtpUseCase
@@ -36,7 +37,7 @@ import com.webscare.interiorismai.utils.getDeviceId
 
 class AuthViewModel(private val verifyOtpUseCase: VerifyOtpUseCase,
                     private val loginUseCase: LoginUseCase,
-//                    private val loginWithGoogleUseCase: LoginWithGoogleUseCase,
+                    private val loginWithGoogleUseCase: LoginWithGoogleUseCase,
                     private val logoutUseCase: LogoutUseCase,
                     private val resendOtpUseCase: ResendOtpUseCase,
                     private val registerGuestUseCase: RegisterGuestUseCase,
@@ -124,19 +125,49 @@ class AuthViewModel(private val verifyOtpUseCase: VerifyOtpUseCase,
 
     fun loginWithGoogle() {
         viewModelScope.launch {
+            // 1. Loading start karein
             _state.update { it.copy(isLoading = true) }
 
-            val result = googleSignInHelper.signIn()
+            try {
+                val result = googleSignInHelper.signIn()
 
-            if (result.isSuccess) {
-                // Aapka sharedViewModel.loginWithGoogle(email) wala logic yahan
+                // 2. Check karein ki result success hai ya error (Custom class properties use karein)
+                if (result.email != null) {
+                    // Google Login Success: Ab Backend API call karein
+                    val apiResult = loginWithGoogleUseCase(
+                        packageName = "com.webscare.interiorismai",
+                        deviceId = getDeviceId(),
+                        userEmail = result.email, // Yahan result.email use karein
+                        authProvider = "google"
+                    )
 
-                _uiEvent.emit(CommonUiEvent.NavigateToHome)
-            } else {
-                _uiEvent.emit(CommonUiEvent.ShowError(result.error ?: "Sign in failed"))  // ✅
+                    // 3. API Response Handle karein
+                    apiResult.onSuccess { response ->
+                        _state.value = _state.value.copy(loginResponse = ResultState.Success(response))
+                        settings.putBoolean(Constants.LOGIN, true)
+                        settings.putString("user_email", result.email ?: "")
+                        settings.putString("auth_provider", "google") // Save this!
+                        fetchUserDetails()
+                        _uiEvent.emit(CommonUiEvent.NavigateToHome)
+                        println("DEBUG: Login Response: $response")
+                    }.onFailure { exception ->
+                        val errorMsg = exception.message ?: "Google Login Backend Failed"
+                        _state.value = _state.value.copy(loginResponse = ResultState.Failure(errorMsg))
+                        _uiEvent.emit(CommonUiEvent.ShowError(errorMsg))
+                        println("DEBUG: Google Login Backend Failed: $errorMsg")
+                    }
+                } else {
+                    // 4. Google Sign-In step fail ho gaya
+                    val errorMsg = result.error ?: "Sign in cancelled or failed"
+                    _state.value = _state.value.copy(loginResponse = ResultState.Failure(errorMsg))
+                    _uiEvent.emit(CommonUiEvent.ShowError(errorMsg))
+                }
+            } catch (e: Exception) {
+                _uiEvent.emit(CommonUiEvent.ShowError("Something went wrong"))
+            } finally {
+                // 5. Loading stop karein (finally block ensure karta hai ki loading off ho jaye)
+                _state.update { it.copy(isLoading = false) }
             }
-
-            _state.update { it.copy(isLoading = false) }
         }
     }
     data class AuthState(val isLoading: Boolean = false)

@@ -5,23 +5,34 @@ import org.koin.dsl.module
 import com.webscare.interiorismai.domain.usecase.AddCreditsUseCase
 import com.webscare.interiorismai.domain.usecase.FetchGeneratedRoomUseCase
 import com.webscare.interiorismai.domain.usecase.GenerateRoomUseCase
+import com.webscare.interiorismai.domain.usecase.LoginUseCase
+import com.webscare.interiorismai.domain.usecase.LoginWithGoogleUseCase
+import com.webscare.interiorismai.domain.usecase.LogoutUseCase
 import com.webscare.interiorismai.domain.usecase.RegisterGuestUseCase
+import com.webscare.interiorismai.domain.usecase.ResendOtpUseCase
 import com.webscare.interiorismai.domain.usecase.SpendCreditsUseCase
 import com.webscare.interiorismai.domain.usecase.SpendCreditsUseCaseGuest
+import com.webscare.interiorismai.domain.usecase.VerifyOtpUseCase
 import com.webscare.interiorismai.navigation.NavigationViewModel
 import com.webscare.interiorismai.ui.authentication.AuthViewModel
 import com.webscare.interiorismai.ui.CreateAndExplore.RoomsViewModel
 import com.webscare.interiorismai.ui.OnBoarding.OnBoardingViewModel
+import org.koin.core.module.dsl.viewModel
 
 val viewModelModule = module {
+    factory { VerifyOtpUseCase(get()) }
+    factory { LoginUseCase(get()) }
+    factory { LogoutUseCase(get()) }
+    factory { ResendOtpUseCase(get()) }
+    factory { RegisterGuestUseCase(get()) }
+    factory { LoginWithGoogleUseCase(get()) }
     factory { AddCreditsUseCase(get()) }
     factory { SpendCreditsUseCase(get()) }
-    factory { RegisterGuestUseCase(get()) }
+    factory { SpendCreditsUseCaseGuest(get()) }
     factory { GenerateRoomUseCase(get()) }
     factory { FetchGeneratedRoomUseCase(get()) }
-    factory { SpendCreditsUseCaseGuest(get()) }
 
-    single {
+    viewModel {
         AuthViewModel(
             verifyOtpUseCase = get(),
             loginUseCase = get(),
@@ -31,11 +42,11 @@ val viewModelModule = module {
             repository = get(),
             settings = get(),
             googleSignInHelper = get(),
-//           loginWithGoogleUseCase = get()
+          loginWithGoogleUseCase = get()
         )
     }
 
-    single {
+    viewModel {
         RoomsViewModel(
             roomsRepository = get(),
             addCreditsUseCase = get(),
