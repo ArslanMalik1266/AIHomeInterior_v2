@@ -7,6 +7,8 @@ import com.webscare.interiorismai.domain.model.RoomUi
 
 
 fun RoomDetail.toEntity(): RoomEntity {
+    val colorString = color?.colors?.joinToString(",") ?: ""
+    println("🎨 COLORS SAVING TO DB: $colorString")
     return RoomEntity(
         id = id,
         imageUrl = imageUrl,
@@ -23,6 +25,7 @@ fun RoomDetail.toEntity(): RoomEntity {
 }
 
 fun RoomEntity.toUi(): RoomUi {
+    println("🎨 COLORS FROM DB: $colorHexCodes")
     // 1. Check karein string blank toh nahi
     val colorList = if (colorHexCodes.isBlank()) {
         emptyList()
@@ -30,6 +33,7 @@ fun RoomEntity.toUi(): RoomUi {
         // 2. Sirf valid strings ko process karein
         colorHexCodes.split(",").filter { it.isNotBlank() }.mapNotNull { it.toColorOrNull() }
     }
+    println("🎨 COLORS PARSED: ${colorList.size}")
 
     return RoomUi(
         id = id,

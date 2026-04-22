@@ -57,6 +57,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import com.webscare.interiorismai.data.local.entities.RecentGeneratedEntity
 import com.webscare.interiorismai.domain.model.RoomUi
+import com.webscare.interiorismai.ui.CreateAndExplore.Explore.OverlappingColorRow
 import com.webscare.interiorismai.ui.CreateAndExplore.RoomEvent
 import com.webscare.interiorismai.ui.CreateAndExplore.RoomsViewModel
 import com.webscare.interiorismai.ui.theme.black_color
@@ -414,6 +415,14 @@ private fun RoomCategoryCard(room: RoomUi, modifier: Modifier = Modifier, onClic
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 lineHeight = 14.sp,
+            )
+        }
+        if (room.colors.isNotEmpty()) {
+            OverlappingColorRow(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 8.dp, end = 8.dp),
+                colors = room.colors
             )
         }
     }

@@ -21,6 +21,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import com.webscare.interiorismai.data.local.entities.DraftEntity
 import com.webscare.interiorismai.data.local.entities.RecentGeneratedEntity
+import com.webscare.interiorismai.data.mapper.toColorOrNull
 import com.webscare.interiorismai.data.mapper.toUi
 import com.webscare.interiorismai.data.remote.util.ResultState
 import com.webscare.interiorismai.domain.model.GenerateRoomRequest
@@ -434,42 +435,39 @@ class RoomsViewModel(
             }
 
             is RoomEvent.SetTemplateDetails -> {
-                println("DEBUG_OBJECT_DUMP: $event")
-                println("DEBUG_CLASS_PATH: ViewModel class path = ${event::class.qualifiedName}")
-                // 🔹 Yahan check karein ke Event ke paas data aaya ya nahi
-                println("DEBUG_VIEWMODEL: Received Compressed=${event.compressedImageUrl}")
-                println("DEBUG_VIEWMODEL: Received Full=${event.fullImageUrl}")
-                // 1. Check karein ke API wali list load hui hai ya nahi
                 val isColorsListEmpty = _state.value.availableColors.isEmpty()
 
-                // 2. Palette ID decide karne ki logic
                 val matchedPaletteId = if (!isColorsListEmpty) {
-                    // Online mode: List se match dhundho
                     _state.value.availableColors.firstOrNull { palette ->
                         palette.colors.map { it.toRawHex() } == event.colors
                     }?.id ?: 0
                 } else {
-                    // Offline mode: Purana selectedPaletteId sambhaal kar rakho, overwrite mat karo
                     _state.value.selectedPaletteId
                 }
 
-                // 3. State update (Safety ke saath)
+                // ✅ Offline ke liye — colors se directly palette banao
+                val offlinePalette = if (isColorsListEmpty && event.colors.isNotEmpty()) {
+                    ColorPalette(
+                        id = -1,
+                        name = "Room Palette",
+                        colors = event.colors.mapNotNull { it.toColorOrNull() }
+                    )
+                } else null
+
                 _state.update { currentState ->
                     currentState.copy(
-                        // Sirf tab update karein agar event mein data hai, warna purana data rehne dein
                         selectedRoomType = event.type.takeIf { it.isNotBlank() } ?: currentState.selectedRoomType,
                         selectedStyleName = event.style.takeIf { it.isNotBlank() } ?: currentState.selectedStyleName,
                         selectedPaletteId = matchedPaletteId,
                         compressedImageUrl = event.compressedImageUrl,
                         fullImageUrl = event.fullImageUrl,
-                        // Flags
                         isFromExplore = true,
                         selectedImageBytes = null,
-                        selectedImage = null
+                        selectedImage = null,
+                        selectedPalette = offlinePalette  // ✅ offline palette directly set
                     )
                 }
             }
-
             // Room type / style / palette selection events
             is RoomEvent.OnRoomTypeSelected -> {
                 _state.value = _state.value.copy(selectedRoomType = event.roomType)

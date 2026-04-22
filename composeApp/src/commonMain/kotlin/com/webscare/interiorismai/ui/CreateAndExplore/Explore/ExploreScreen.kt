@@ -262,7 +262,7 @@ fun ExploreScreen(viewModel: RoomsViewModel = koinViewModel(), onRoomClick: (Roo
                         else -> ExploreGrid(
                             rooms = state.filteredRooms,
                             onRoomClick = onRoomClick,
-                            gridState = listState
+                            gridState = listState,
                         )
                     }
                 }
@@ -393,7 +393,8 @@ private fun ExploreGrid(
 @Composable
 private fun RoomImageCard(
     room: RoomUi,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+
 ) {
     Box(
         modifier = Modifier

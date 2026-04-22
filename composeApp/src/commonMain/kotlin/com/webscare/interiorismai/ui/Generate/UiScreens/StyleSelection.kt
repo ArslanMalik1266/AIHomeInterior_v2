@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.webscare.interiorismai.domain.model.InteriorStyle
@@ -223,6 +224,8 @@ private fun StyleCard(
             model = ImageRequest.Builder(LocalPlatformContext.current)
                 .data(style.compressed_image_url)
                 .crossfade(true)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .memoryCachePolicy(CachePolicy.ENABLED)
                 .build(),
             placeholder = painterResource(Res.drawable.roomplaceholder),
             error = painterResource(Res.drawable.roomplaceholder),

@@ -75,6 +75,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import coil3.compose.LocalPlatformContext
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
 import homeinterior.composeapp.generated.resources.*
 import io.github.ismoy.imagepickerkmp.presentation.ui.components.GalleryPickerLauncher
 import kotlinx.coroutines.delay
@@ -359,6 +362,7 @@ fun BaseBottomBarScreen(
                             navController.navigate(Routes.AbtToGenerate)
                         },
                         onRoomClick = { room ->
+
                             roomViewModel.clearBundleSelection()
                             val hexColors = room.colors.map { color ->
                                 roomViewModel.run { color.toRawHex() }

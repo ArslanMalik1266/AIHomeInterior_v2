@@ -61,10 +61,15 @@ fun AboutToGenerateScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var isClosing by remember { mutableStateOf(false) }
     val paletteToDisplay = if (state.isFromExplore) {
-        state.availableColors.find { it.id == state.selectedPaletteId }
+        val found = state.availableColors.find { it.id == state.selectedPaletteId }
+        println("🎨 found=$found selectedPalette=${state.selectedPalette}")
+        found ?: state.selectedPalette
     } else {
+
         state.selectedPalette ?: state.filterColors.firstOrNull()
     }
+    println("🎨 FINAL paletteToDisplay=$paletteToDisplay")
+
 
     val buttonText = when {
         state.isFromExplore && state.selectedImageBytes == null -> "Upload my Room"
@@ -143,7 +148,7 @@ fun AboutToGenerateScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             paletteToDisplay?.let { palette ->
-                println("pallatecolors = ${palette.id}")
+                println("🎨 RENDERING PALETTE: ${palette.colors.size} colors")
                 ColorPaletteCard(
                     borderColor = Color(0xFFCBE0A7),
                     paletteColors = palette.colors,
@@ -153,7 +158,7 @@ fun AboutToGenerateScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
                 )
-            }
+            }?: println("🎨 PALETTE IS NULL — not rendering")
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -427,7 +432,8 @@ private fun ColorPaletteCard(
     modifier: Modifier = Modifier,
     onEditClick: () -> Unit = {},
     isEditable: Boolean = true
-) {
+)
+{
     val backgroundColor = Color(0xFFFFFFFF).copy(alpha = 0.57f)
     val lightGrayText = Color(0xFF90918F)
     val editIconColor = Color(0xFFB3B5B1)
