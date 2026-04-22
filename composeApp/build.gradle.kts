@@ -145,8 +145,8 @@ android {
         applicationId = "com.webscare.interiorismai"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 3
-        versionName = "1.0.3"
+        versionCode = 4
+        versionName = "1.0.4 "
 
     }
     packaging {
@@ -181,9 +181,11 @@ android {
         abortOnError = false  // ✅ Yeh add karo
         checkReleaseBuilds = false  // ✅ Yeh bhi
     }
+
 }
 
 dependencies {
+    implementation(libs.androidx.core.ktx)
     debugImplementation(compose.uiTooling)
 
     add("kspCommonMainMetadata", libs.androidx.room.compiler)

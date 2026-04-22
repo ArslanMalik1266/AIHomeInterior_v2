@@ -124,25 +124,29 @@ class AuthViewModel(private val verifyOtpUseCase: VerifyOtpUseCase,
     }
 
     fun loginWithGoogle() {
+        println("DEBUG_LOGIN: Function Started")
         viewModelScope.launch {
             // 1. Loading start karein
             _state.update { it.copy(isLoading = true) }
 
             try {
                 val result = googleSignInHelper.signIn()
+                println("DEBUG_LOGIN: SignIn result received. Email: ${result.email}, Error: ${result.error}")
 
                 // 2. Check karein ki result success hai ya error (Custom class properties use karein)
                 if (result.email != null) {
+                    println("DEBUG_LOGIN: Google Login success, now calling Backend API...")
                     // Google Login Success: Ab Backend API call karein
                     val apiResult = loginWithGoogleUseCase(
                         packageName = "com.webscare.interiorismai",
                         deviceId = getDeviceId(),
-                        userEmail = result.email, // Yahan result.email use karein
+                        userEmail = result.email,
                         authProvider = "google"
                     )
 
                     // 3. API Response Handle karein
                     apiResult.onSuccess { response ->
+                        println("DEBUG_LOGIN: Backend API Success!")
                         _state.value = _state.value.copy(loginResponse = ResultState.Success(response))
                         settings.putBoolean(Constants.LOGIN, true)
                         settings.putString("user_email", result.email ?: "")
@@ -151,22 +155,25 @@ class AuthViewModel(private val verifyOtpUseCase: VerifyOtpUseCase,
                         _uiEvent.emit(CommonUiEvent.NavigateToHome)
                         println("DEBUG: Login Response: $response")
                     }.onFailure { exception ->
+                        println("DEBUG_LOGIN: Backend API FAILED: ${exception.message}")
                         val errorMsg = exception.message ?: "Google Login Backend Failed"
                         _state.value = _state.value.copy(loginResponse = ResultState.Failure(errorMsg))
                         _uiEvent.emit(CommonUiEvent.ShowError(errorMsg))
-                        println("DEBUG: Google Login Backend Failed: $errorMsg")
                     }
                 } else {
+                    println("DEBUG_LOGIN: result.email is NULL. Error: ${result.error}")
                     // 4. Google Sign-In step fail ho gaya
                     val errorMsg = result.error ?: "Sign in cancelled or failed"
                     _state.value = _state.value.copy(loginResponse = ResultState.Failure(errorMsg))
                     _uiEvent.emit(CommonUiEvent.ShowError(errorMsg))
                 }
             } catch (e: Exception) {
+                println("DEBUG_LOGIN: EXCEPTION CAUGHT: ${e.message}")
                 _uiEvent.emit(CommonUiEvent.ShowError("Something went wrong"))
             } finally {
                 // 5. Loading stop karein (finally block ensure karta hai ki loading off ho jaye)
                 _state.update { it.copy(isLoading = false) }
+                println("DEBUG_LOGIN: Finally block (Loading stopped)")
             }
         }
     }

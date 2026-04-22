@@ -3,6 +3,7 @@ package com.webscare.interiorismai.ui.authentication.Login
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -61,8 +62,9 @@ fun LoginScreen(
     onLoginEvent: (event: RegisterEvent) -> Unit,
     onBackClick: (() -> Unit)? = null
 ) {
-    val isEmailValid = isValidEmail(state.email)
 
+    val isEmailValid = isValidEmail(state.email)
+    val interactionSource = remember { MutableInteractionSource() }
     val snackBarState = rememberCustomSnackbarState()
     LaunchedEffect(Unit) {
         uiEvent.collect { event ->
@@ -196,6 +198,7 @@ fun LoginScreen(
             Button(
                 onClick = {
                     authViewModel.loginWithGoogle()
+
                 },
                 enabled = true,
                 modifier = Modifier

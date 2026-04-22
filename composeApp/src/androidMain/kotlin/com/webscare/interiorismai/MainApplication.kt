@@ -1,10 +1,11 @@
 package com.webscare.interiorismai
 
 import android.app.Application
+import com.webscare.interiorismai.di.appModule
+
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.workmanager.koin.workManagerFactory
 import org.koin.core.context.startKoin
-import com.webscare.interiorismai.di.appModule
 import com.webscare.interiorismai.di.platformModule
 import com.webscare.interiorismai.utils.AppContext
 import com.webscare.interiorismai.utils.NotificationManager
