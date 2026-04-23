@@ -75,15 +75,19 @@ class AuthViewModel(private val verifyOtpUseCase: VerifyOtpUseCase,
             println("DEBUG_DEVICE_ID: = $deviceId")
             val result = registerGuestUseCase(
                 packageName = "com.webscare.interiorismai",
-                deviceId = getDeviceId()
-
+                deviceId = deviceId
             )
 
             when (result) {
                 is ResultState.Success -> {
-
                     val session = result.data
+
                     if (!session.isNew && session.user.userEmail != null) {
+
+                        // ✅ Yeh 2 lines missing theen — clear data ke baad email restore
+                        settings.putString("user_email", session.user.userEmail!!)
+                        settings.putBoolean(Constants.LOGIN, true)
+
                         _state.update {
                             it.copy(
                                 email = session.user.userEmail!!,
@@ -91,7 +95,16 @@ class AuthViewModel(private val verifyOtpUseCase: VerifyOtpUseCase,
                                 totalCredits = session.totalCredits
                             )
                         }
+                        _user.value = UserDetail(
+                            id = session.user.id,
+                            appId = session.user.appId,
+                            deviceId = session.user.deviceId,
+                            freeCredits = session.user.freeCredits,
+                            totalCredits = session.user.totalCredits,
+                            userEmail = session.user.userEmail
+                        )
                         fetchUserDetails()
+
                     } else {
                         _guestSession.value = session
                         _state.update {
@@ -107,14 +120,11 @@ class AuthViewModel(private val verifyOtpUseCase: VerifyOtpUseCase,
                     println("DEBUG_GUEST: Registration Failed: ${result.msg}")
                 }
                 else -> {
-                    println("DEBUG_GUEST: Register check:  isNew:")
-
-
+                    println("DEBUG_GUEST: Register check: isNew:")
                 }
             }
         }
-    }
-    fun onAuthEvent(event: RegisterEvent) {
+    }    fun onAuthEvent(event: RegisterEvent) {
         when (event) {
             is RegisterEvent.FetchUserDetails -> {
                 fetchUserDetails()

@@ -158,17 +158,23 @@ actual class BillingHelper actual constructor(
     }
 
     private fun handlePurchase(purchase: Purchase) {
-        if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
-            val productId = purchase.products.firstOrNull() ?: return
-            val credits = creditsFor(productId)
-            mainHandler.post { onPurchaseComplete(productId, credits) }
-            if (!purchase.isAcknowledged) {
-                billingClient.consumeAsync(
-                    ConsumeParams.newBuilder()
-                        .setPurchaseToken(purchase.purchaseToken).build()
-                ) { consumeResult, _ ->
-                    println("🟢 CONSUME: code=${consumeResult.responseCode}")
-                }
+        if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) return
+
+        val productId = purchase.products.firstOrNull() ?: return
+        val credits = creditsFor(productId)
+
+        // ✅ Pehle consume karo — success ke baad credits do
+        billingClient.consumeAsync(
+            ConsumeParams.newBuilder()
+                .setPurchaseToken(purchase.purchaseToken)
+                .build()
+        ) { consumeResult, _ ->
+            println("🟢 CONSUME: code=${consumeResult.responseCode}")
+            if (consumeResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                // ✅ Sirf consume success hone ke baad credits add karo
+                mainHandler.post { onPurchaseComplete(productId, credits) }
+            } else {
+                println("❌ CONSUME FAILED: credits nahi diye")
             }
         }
     }

@@ -1,6 +1,8 @@
 package com.webscare.interiorismai.utils
 
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.util.Log
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
@@ -15,6 +17,9 @@ actual class GoogleSignInHelper(private val context: Context) {
     private val credentialManager = CredentialManager.create(context)
 
     actual suspend fun signIn(): GoogleSignInResult {
+        val activityContext = context.findActivity() ?: return GoogleSignInResult(
+            error = "Activity context not found. Call from Activity only."
+        )
         return try {
             val googleIdOption = GetGoogleIdOption.Builder()
                 .setFilterByAuthorizedAccounts(false)
@@ -28,7 +33,7 @@ actual class GoogleSignInHelper(private val context: Context) {
 
             val result = credentialManager.getCredential(
                 request = request,
-                context = context
+                context = activityContext
             )
 
             // handleGoogleCredential logic
@@ -56,4 +61,12 @@ actual class GoogleSignInHelper(private val context: Context) {
             GoogleSignInResult(error = e.message)
         }
     }
+}
+fun Context.findActivity(): Activity? {
+    var ctx = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }
